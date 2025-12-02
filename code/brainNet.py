@@ -38,8 +38,11 @@ class BrainNet:
     edges = {}
 
     def __init__(self, dataset: str):
-        csvEdgesPath = op.join("datasets", dataset, "edges.csv")
-        csvNodesPath = op.join("datasets", dataset, "nodes.csv")
+        root = op.dirname(__file__)
+        if op.basename(root) != "code":
+            raise Exception("Unexpected file location")
+        csvEdgesPath = op.join(root,"datasets", dataset, "edges.csv")
+        csvNodesPath = op.join(root,"datasets", dataset, "nodes.csv")
 
         self.nodes = _extraction_data_csv(csvNodesPath)
         self.edges = _extraction_data_csv(csvEdgesPath)
@@ -78,5 +81,5 @@ class BrainNet:
 
 
 if __name__ == "__main__":
-    brainNet = BrainNet("synthetic_graph_1")
+    brainNet = BrainNet("CD1-E_no2")
     brainNet.visualize()
