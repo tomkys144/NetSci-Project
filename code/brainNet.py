@@ -1,43 +1,56 @@
 import os.path as op
+import os
 import math
-
+import numpy as np
 from matplotlib import pyplot as plt
 
 
 def _extraction_data_csv(filePath):
     file = open(filePath, "r")
     lines = file.readlines()
-    file_dic = {}
+    fileDic = {}
     keys = lines[0].split(";")
     for k in range(len(keys)):
         keys[k] = keys[k].replace("\n", "")
     for i in lines[1:]:
-        current_line = {}
-        list_line = i.split(";")
-        for j in range(1, len(list_line)):
-            current_line[keys[j]] = float(list_line[j].replace("\n", ""))
-        file_dic[int(list_line[0])] = current_line
-    return (file_dic)
+        currentLine = {}
+        listLine = i.split(";")
+        for j in range(1, len(listLine)):
+            currentLine[keys[j]] = float(listLine[j].replace("\n", ""))
+        fileDic[int(listLine[0])] = currentLine
+    return (fileDic)
 
 
 def _normalize_dic_by_key(dic, key):
-    min_value = math.inf
-    max_value = -math.inf
+    minValue = math.inf
+    maxValue = -math.inf
     for i in dic:
-        if dic[i][key] < min_value :
-            min_value = dic[i][key]
-        if dic[i][key] > max_value :
-            max_value = dic[i][key]
+        if dic[i][key] < minValue :
+            minValue = dic[i][key]
+        if dic[i][key] > maxValue :
+            maxValue = dic[i][key]
     for i in dic:
-        dic[i][key] = (dic[i][key] - min_value) / (max_value-min_value)
+        dic[i][key] = (dic[i][key] - minValue) / (maxValue-minValue)
     return(dic)
+
+def _edges2matrix(edges, numNodes, keyNode1, keyNode2, keyWeight='', undirected=True):
+    adjMatrix = np.zeros((numNodes, numNodes))
+    for edge in edges.values():
+        node1 = int(edge[keyNode1])
+        node2 = int(edge[keyNode2])
+        weight = edge[keyWeight]
+        adjMatrix[node1, node2] = weight
+        if undirected:
+            adjMatrix[node2, node1] = weight
+    return adjMatrix
 
 
 class BrainNet:
-    nodes = {}
-    edges = {}
+    nodes = None
+    edges = None
+    adjMatrix = None
 
-    def __init__(self, dataset: str):
+    def __init__(self, dataset: str, useCache = True):
         root = op.dirname(__file__)
         if op.basename(root) != "code":
             raise Exception("Unexpected file location")
@@ -48,13 +61,25 @@ class BrainNet:
         self.edges = _extraction_data_csv(csvEdgesPath)
 
         # normalization between 0 and 100
-        nodes_keys_to_normalize = ["pos_x", "pos_y", "pos_z"]
-        for key in nodes_keys_to_normalize:
+        nodesKeysToNormalize = ["pos_x", "pos_y", "pos_z"]
+        for key in nodesKeysToNormalize:
             self.nodes = _normalize_dic_by_key(self.nodes, key)
 
-        edges_keys_to_normalize = ["avgRadiusAvg"]
-        for key in edges_keys_to_normalize:
+        edgesKeysToNormalize = ["avgRadiusAvg"]
+        for key in edgesKeysToNormalize:
             self.edges = _normalize_dic_by_key(self.edges, key)
+
+        if useCache:
+            try:
+                self.adjMatrix = np.load(op.join(root,"cache", f'{dataset}.npy'))
+            except FileNotFoundError:
+                self.adjMatrix = _edges2matrix(self.edges, len(self.nodes), 'node1id', 'node2id', 'avgRadiusAvg')
+                if not op.exists(op.join(root,"cache")):
+                    os.makedirs(op.join(root,"cache"))
+                np.save(op.join(root,"cache", f'{dataset}.npy'), self.adjMatrix)
+        else:
+            self.adjMatrix = _edges2matrix(self.edges, len(self.nodes), 'node1id', 'node2id', 'avgRadiusAvg')
+
 
     def visualize(self, outputFile='', show=True):
         fig, ax = plt.subplots()
@@ -81,5 +106,5 @@ class BrainNet:
 
 
 if __name__ == "__main__":
-    brainNet = BrainNet("CD1-E_no2")
+    brainNet = BrainNet("synthetic_graph_1")
     brainNet.visualize()
