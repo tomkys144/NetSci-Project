@@ -13,7 +13,7 @@ def _normalize_df_by_key(df: pd.DataFrame, key: str) -> pd.DataFrame:
 
     df[key] = (df[key] - minValue) / (maxValue - minValue)
 
-    return (df)
+    return df
 
 
 class BrainNet:
