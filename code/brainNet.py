@@ -17,9 +17,9 @@ def _normalize_df_by_key(df: pd.DataFrame, key: str) -> pd.DataFrame:
 
 
 class BrainNet:
-    nodes = None
-    edges = None
-    graph = None
+    nodes: pd.DataFrame
+    edges: pd.DataFrame
+    graph: nx.Graph | nx.DiGraph
 
     def __init__(self, dataset: str, directed: bool = False, useCache: bool = True):
         root = op.dirname(__file__)
@@ -84,18 +84,19 @@ class BrainNet:
             except FileNotFoundError:
                 if directed:
                     self.graph = nx.from_pandas_edgelist(
-                        self.edges,
+                        df=self.edges,
                         source='node1id',
                         target='node2id',
                         edge_attr='avgRadiusAvg',
-                        create_using=nx.DiGraph()
+                        create_using=nx.DiGraph,
                     )
                 else:
                     self.graph = nx.from_pandas_edgelist(
-                        self.edges,
+                        df=self.edges,
                         source='node1id',
                         target='node2id',
                         edge_attr='avgRadiusAvg',
+                        create_using=nx.Graph,
                     )
                 nx.set_node_attributes(self.graph, self.nodes.to_dict('index'))
                 if not op.exists(op.join(root, "cache")):
@@ -104,31 +105,32 @@ class BrainNet:
         else:
             if directed:
                 self.graph = nx.from_pandas_edgelist(
-                    self.edges,
+                    df=self.edges,
                     source='node1id',
                     target='node2id',
                     edge_attr='avgRadiusAvg',
-                    create_using=nx.DiGraph()
+                    create_using=nx.DiGraph
                 )
             else:
                 self.graph = nx.from_pandas_edgelist(
-                    self.edges,
+                    df=self.edges,
                     source='node1id',
                     target='node2id',
                     edge_attr='avgRadiusAvg',
+                    create_using=nx.Graph
                 )
             nx.set_node_attributes(self.graph, self.nodes.to_dict('index'))
 
-    def visualize(self, outputFile:str='', show:bool=True):
+    def visualize(self, outputFile: str = '', show: bool = True):
         fig, ax = plt.subplots()
         ax = fig.add_subplot(projection='3d')
 
         print("Graphing...")
         progress = 0
         for source, target, attr in self.graph.edges(data=True):
-            X = [self.graph.nodes[source]['pos_x'] , self.graph.nodes[target]['pos_x']]
-            Y = [self.graph.nodes[source]['pos_y'] , self.graph.nodes[target]['pos_y']]
-            Z = [self.graph.nodes[source]['pos_z'] , self.graph.nodes[target]['pos_z']]
+            X = [self.graph.nodes[source]['pos_x'], self.graph.nodes[target]['pos_x']]
+            Y = [self.graph.nodes[source]['pos_y'], self.graph.nodes[target]['pos_y']]
+            Z = [self.graph.nodes[source]['pos_z'], self.graph.nodes[target]['pos_z']]
             ax.plot(X, Y, Z, linewidth=attr['avgRadiusAvg'] * 5, color='red', alpha=0.4)
             if progress % 5000 == 0:
                 print(str(100 * progress / len(self.edges)) + "%         \r")
