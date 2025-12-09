@@ -1,0 +1,19 @@
+[project]
+name = "Network Science Project"
+version = "1.0.0"
+dependencies = [
+    "numpy>=2.3.5",
+    "pandas>=2.3.3",
+    "networkx>=3.6.1",
+    "matplotlib>=3.10.7"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyright",
+    "black"
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
