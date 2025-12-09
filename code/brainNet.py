@@ -31,14 +31,14 @@ class BrainNet:
             csvNodesPath,
             header=0,
             delimiter=";",
-            index_col='id',
+            index_col="id",
             dtype={
-                'pos_x': np.float64,
-                'pos_y': np.float64,
-                'pos_z': np.float64,
-                'degree': np.int32,
-                'isAtSampleBorder': np.bool
-            }
+                "pos_x": np.float64,
+                "pos_y": np.float64,
+                "pos_z": np.float64,
+                "degree": np.int32,
+                "isAtSampleBorder": np.bool,
+            },
         )
 
         print("Loadin edges...")
@@ -46,18 +46,13 @@ class BrainNet:
             csvEdgesPath,
             header=0,
             delimiter=";",
-            index_col='id',
-            usecols=(
-                'id',
-                'node1id',
-                'node2id',
-                'avgRadiusAvg'
-            ),
+            index_col="id",
+            usecols=("id", "node1id", "node2id", "avgRadiusAvg"),
             dtype={
-                'node1id': np.int32,
-                'node2id': np.int32,
-                'avgRadiusAvg': np.float64
-            }
+                "node1id": np.int32,
+                "node2id": np.int32,
+                "avgRadiusAvg": np.float64,
+            },
         )
 
         print("Normalizing nodes...")
@@ -73,65 +68,67 @@ class BrainNet:
         print("Creating graph...")
         if useCache:
             if directed:
-                cachePath = op.join(root, "cache", f'{dataset}_dir.pickle')
+                cachePath = op.join(root, "cache", f"{dataset}_dir.pickle")
             else:
-                cachePath = op.join(root, "cache", f'{dataset}_udir.pickle')
+                cachePath = op.join(root, "cache", f"{dataset}_udir.pickle")
 
             try:
-                self.graph = pickle.load(open(cachePath, 'rb'))
+                self.graph = pickle.load(open(cachePath, "rb"))
             except FileNotFoundError:
                 if directed:
                     self.graph = nx.from_pandas_edgelist(
                         df=edges,
-                        source='node1id',
-                        target='node2id',
-                        edge_attr='avgRadiusAvg',
+                        source="node1id",
+                        target="node2id",
+                        edge_attr="avgRadiusAvg",
                         create_using=nx.DiGraph,
                     )
                 else:
                     self.graph = nx.from_pandas_edgelist(
                         df=edges,
-                        source='node1id',
-                        target='node2id',
-                        edge_attr='avgRadiusAvg',
+                        source="node1id",
+                        target="node2id",
+                        edge_attr="avgRadiusAvg",
                         create_using=nx.Graph,
                     )
-                nx.set_node_attributes(self.graph, nodes.to_dict('index'))
+                nx.set_node_attributes(self.graph, nodes.to_dict("index"))
                 if not op.exists(op.join(root, "cache")):
                     os.makedirs(op.join(root, "cache"))
-                pickle.dump(self.graph, open(cachePath, 'wb'))
+                pickle.dump(self.graph, open(cachePath, "wb"))
         else:
             if directed:
                 self.graph = nx.from_pandas_edgelist(
                     df=edges,
-                    source='node1id',
-                    target='node2id',
-                    edge_attr='avgRadiusAvg',
-                    create_using=nx.DiGraph
+                    source="node1id",
+                    target="node2id",
+                    edge_attr="avgRadiusAvg",
+                    create_using=nx.DiGraph,
                 )
             else:
                 self.graph = nx.from_pandas_edgelist(
                     df=edges,
-                    source='node1id',
-                    target='node2id',
-                    edge_attr='avgRadiusAvg',
-                    create_using=nx.Graph
+                    source="node1id",
+                    target="node2id",
+                    edge_attr="avgRadiusAvg",
+                    create_using=nx.Graph,
                 )
-            nx.set_node_attributes(self.graph, nodes.to_dict('index'))
+            nx.set_node_attributes(self.graph, nodes.to_dict("index"))
 
-    def visualize(self, outputFile: str = '', show: bool = True):
+    def visualize(self, outputFile: str = "", show: bool = True):
         fig, ax = plt.subplots()
-        ax = fig.add_subplot(projection='3d')
+        ax = fig.add_subplot(projection="3d")
 
         print("Graphing...")
         progress = 0
         for source, target, attr in self.graph.edges(data=True):
-            X = [self.graph.nodes[source]['pos_x'], self.graph.nodes[target]['pos_x']]
-            Y = [self.graph.nodes[source]['pos_y'], self.graph.nodes[target]['pos_y']]
-            Z = [self.graph.nodes[source]['pos_z'], self.graph.nodes[target]['pos_z']]
-            ax.plot(X, Y, Z, linewidth=attr['avgRadiusAvg'] * 5, color='red', alpha=0.4)
+            X = [self.graph.nodes[source]["pos_x"], self.graph.nodes[target]["pos_x"]]
+            Y = [self.graph.nodes[source]["pos_y"], self.graph.nodes[target]["pos_y"]]
+            Z = [self.graph.nodes[source]["pos_z"], self.graph.nodes[target]["pos_z"]]
+            ax.plot(X, Y, Z, linewidth=attr["avgRadiusAvg"] * 5, color="red", alpha=0.4)
             if progress % 5000 == 0:
-                print(str(100 * progress / self.graph.number_of_edges()) + "%         \r")
+                print(
+                    str(100 * progress / self.graph.number_of_edges()) + "%         \r"
+                )
             progress += 1
 
         print("Done!")
