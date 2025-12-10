@@ -28,11 +28,11 @@ def _get_prop_type(value, key=None):
     if isinstance(value, bool):
         tname = 'bool'
 
-    elif isinstance(value, int):
+    elif isinstance(value, (int, np.integer)):
         tname = 'float'
         value = float(value)
 
-    elif isinstance(value, float):
+    elif isinstance(value, (float, np.floating)):
         tname = 'float'
 
     elif isinstance(value, dict):
@@ -173,81 +173,91 @@ class BrainNet:
         print("Converting NX graph to GT...")
         self.gtGraph = gt.Graph(directed=self.graph.is_directed())
 
-        # 1. Graph Properties
-        for key, value in self.graph.graph.items():
-            tname, value, key = _get_prop_type(value, key)
-            self.gtGraph.graph_properties[key] = self.gtGraph.new_graph_property(tname)
-            self.gtGraph.graph_properties[key] = value
+        reserved_keys = {"pos"}
 
-        # 2. Register Vertex Properties
+        # --- 1. Register Vertex Properties ---
         nprops = set()
+        # Scan nodes to register properties
         for node, data in self.graph.nodes(data=True):
             for key, val in data.items():
-                if key in nprops: continue
-                tname, _, key = _get_prop_type(val, key)
+                if key in nprops or key in reserved_keys:
+                    continue
+                tname, _, _ = _get_prop_type(val, key)
                 self.gtGraph.vertex_properties[key] = self.gtGraph.new_vertex_property(tname)
                 nprops.add(key)
 
-        # Add 'id' property explicitly
-        self.gtGraph.vertex_properties['id'] = self.gtGraph.new_vertex_property('string')
+        # Store ID explicitly
+        self.gtGraph.vertex_properties["id"] = self.gtGraph.new_vertex_property("string")
 
-        # 3. Register Edge Properties
+        # --- 2. Register Edge Properties (New) ---
         eprops = set()
-        for src, dst, data in self.graph.edges(data=True):
-            for key, val in data.items():
-                if key in eprops: continue
-                tname, _, key = _get_prop_type(val, key)
-                self.gtGraph.edge_properties[key] = self.gtGraph.new_edge_property(tname)
-                eprops.add(key)
+        # Scan edges to register properties (like avgRadiusAvg)
+        if self.graph.number_of_edges() > 0:
+            # We look at the first edge to infer types (assuming homogeneous attributes)
+            # If your graph has sparse attributes, iterate over all edges instead of breaking.
+            for u, v, data in self.graph.edges(data=True):
+                for key, val in data.items():
+                    if key in eprops:
+                        continue
+                    tname, _, _ = _get_prop_type(val, key)
+                    self.gtGraph.edge_properties[key] = self.gtGraph.new_edge_property(tname)
+                    eprops.add(key)
+                break
 
-        # 4. Add Vertices and Data
-        vertices = {}
+                # --- 3. Add Vertices ---
+        vertices = {}  # Mapping from NX ID to GT Vertex object
         for node, data in self.graph.nodes(data=True):
             v = self.gtGraph.add_vertex()
             vertices[node] = v
-
-            # Manually set ID
-            self.gtGraph.vp['id'][v] = str(node)
+            self.gtGraph.vp["id"][v] = str(node)
 
             for key, value in data.items():
-                # Ensure we cast the value exactly as we determined the type
+                if key in reserved_keys:
+                    continue
+                # Safely cast value
                 _, casted_val, _ = _get_prop_type(value, key)
+                # Assign to property map
                 self.gtGraph.vp[key][v] = casted_val
 
-        # 5. Add Edges and Data
-        for src, dst, data in self.graph.edges(data=True):
-            e = self.gtGraph.add_edge(vertices[src], vertices[dst])
-            for key, value in data.items():
-                _, casted_val, _ = _get_prop_type(value, key)
-                self.gtGraph.ep[key][e] = casted_val
+        # --- 4. Add Edges (New) ---
+        for u, v, data in self.graph.edges(data=True):
+            if u in vertices and v in vertices:
+                e = self.gtGraph.add_edge(vertices[u], vertices[v])
 
-        # 6. Create Position Vector for Visualization
-        if "pos" not in self.gtGraph.vp and "pos_x" in self.gtGraph.vp:
-            pos = self.gtGraph.new_vertex_property("vector<double>")
+                # Copy edge attributes
+                for key, value in data.items():
+                    if key in eprops:
+                        _, casted_val, _ = _get_prop_type(value, key)
+                        self.gtGraph.ep[key][e] = casted_val
 
-            # .a returns the numpy array view of the property
-            px = self.gtGraph.vp["pos_x"].a
-            py = self.gtGraph.vp["pos_y"].a
-            pz = self.gtGraph.vp["pos_z"].a
+        # --- 5. Build Position Property ---
+        pos = self.gtGraph.new_vertex_property("vector<double>")
+        for v in self.gtGraph.vertices():
+            pos[v] = [
+                float(self.gtGraph.vp["pos_x"][v]),
+                float(self.gtGraph.vp["pos_y"][v]),
+                float(self.gtGraph.vp["pos_z"][v]),
+            ]
+        self.gtGraph.vp["pos"] = pos
 
-            for v in self.gtGraph.vertices():
-                idx = int(v)
-                pos[v] = [px[idx], py[idx], pz[idx]]
+    def draw_gt(self, outputFile: str = "", coords=(0,1)):
+        pos3d = self.gtGraph.vp.pos.get_2d_array(pos=[0, 1, 2])
+        pos2d = pos3d[list(coords), :]
 
-            self.gtGraph.vp["pos"] = pos
+        pos = self.gtGraph.new_vertex_property("vector<double>")
+        pos.set_2d_array(pos2d)
 
-    def draw_gt(self, outputFile: str = ""):
         if outputFile:
             gt.graph_draw(self.gtGraph,
-                          pos=self.gtGraph.vp["pos"],
-                          output_size=(8000, 8000),
+                          pos=pos,
                           vertex_size=5,
+                          edge_pen_width=gt.prop_to_size(self.gtGraph.ep["avgRadiusAvg"], mi=0, ma=5),
                           output=outputFile)
 
         else:
             gt.graph_draw(
                 self.gtGraph,
-                pos=self.gtGraph.vp["pos"],
+                pos=pos,
                 edge_pen_width=gt.prop_to_size(self.gtGraph.ep["avgRadiusAvg"], mi=0, ma=5)
             )
 
