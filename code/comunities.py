@@ -10,10 +10,6 @@ def sbm(brainNet: BrainNet, nmcmc=100):
 
     state = gt.minimize_nested_blockmodel_dl(
         brainNet.gtGraph,
-        state_args=dict(
-            recs=[brainNet.gtGraph.ep.avgRadiusAvg],
-            rec_types=["real-exponential"]
-        )
     )
 
     print("Calculating MCMC...")

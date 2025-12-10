@@ -17,12 +17,12 @@ def main():
 
     # Find communities
     print("Community detection...")
-    sbmState = comunities.sbm(brainNet, nmcmc=1000)
+    sbmState = comunities.sbm(brainNet, nmcmc=100)
     print("Printing results...")
-    comunities.draw_sbm(sbmState, f"sbm-{dataset}.png")
-    comunities.draw_sbm_shape(sbmState, brainNet, f"sbm-{dataset}-xy.png", coords=(0, 1))
-    comunities.draw_sbm_shape(sbmState, brainNet, f"sbm-{dataset}-xz.png", coords=(0, 2))
-    comunities.draw_sbm_shape(sbmState, brainNet,f"sbm-{dataset}-yz.png", coords=(1,2))
+    comunities.draw_sbm(sbmState, f"sbm-{dataset}.svg")
+    # comunities.draw_sbm_shape(sbmState, brainNet, f"sbm-{dataset}-xy.png", coords=(0, 1))
+    # comunities.draw_sbm_shape(sbmState, brainNet, f"sbm-{dataset}-xz.png", coords=(0, 2))
+    # comunities.draw_sbm_shape(sbmState, brainNet,f"sbm-{dataset}-yz.png", coords=(1,2))
     print("Done")
 
 
