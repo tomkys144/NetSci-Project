@@ -12,7 +12,7 @@ def sbm(brainNet: BrainNet, nmcmc=100):
         brainNet.gtGraph,
         state_args=dict(
             recs=[brainNet.gtGraph.ep.avgRadiusAvg],
-            rec_types=["discrete-binomial"]
+            rec_types=["real-exponential"]
         )
     )
 
@@ -21,7 +21,7 @@ def sbm(brainNet: BrainNet, nmcmc=100):
         if (i / nmcmc * 100) % 1 == 0:
             print("Progress: ", (i / nmcmc * 100), "%")
         state.multiflip_mcmc_sweep(beta=np.inf, niter=10)
-
+        
     state.print_summary()
 
     return state

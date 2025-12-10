@@ -17,7 +17,7 @@ def main():
 
     # Find communities
     print("Community detection...")
-    sbmState = comunities.sbm(brainNet, nmcmc=10)
+    sbmState = comunities.sbm(brainNet, nmcmc=1000)
     print("Printing results...")
     comunities.draw_sbm(sbmState, f"sbm-{dataset}.png")
     comunities.draw_sbm_shape(sbmState, brainNet, f"sbm-{dataset}-xy.png", coords=(0, 1))
