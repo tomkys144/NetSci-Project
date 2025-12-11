@@ -37,7 +37,7 @@ class BrainNet:
                 'pos_y': np.float64,
                 'pos_z': np.float64,
                 'degree': np.int32,
-                'isAtSampleBorder': np.bool
+                'isAtSampleBorder': bool     # "np.bool" changed to "bool" to support versions of  numpy after 1.20 
             }
         )
 
@@ -119,7 +119,7 @@ class BrainNet:
                 )
             nx.set_node_attributes(self.graph, nodes.to_dict('index'))
 
-    def visualize(self, outputFile: str = '', show: bool = True):
+    def visualize(self, outputFile: str = '', show: bool = True):   
         fig, ax = plt.subplots()
         ax = fig.add_subplot(projection='3d')
 
