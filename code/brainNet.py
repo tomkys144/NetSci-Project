@@ -1,10 +1,12 @@
-import os.path as op
 import os
+import os.path as op
+import pickle
+
+import graph_tool.all as gt
 import networkx as nx
 import numpy as np
-from matplotlib import pyplot as plt
 import pandas as pd
-import pickle
+from matplotlib import pyplot as plt
 
 
 def _normalize_df_by_key(df: pd.DataFrame, key: str) -> pd.DataFrame:
@@ -16,8 +18,36 @@ def _normalize_df_by_key(df: pd.DataFrame, key: str) -> pd.DataFrame:
     return df
 
 
+def _get_prop_type(value, key=None):
+    """
+    Performs typing and value conversion for the graph_tool PropertyMap class.
+    If a key is provided, it also ensures the key is in a format that can be
+    used with the PropertyMap. Returns a tuple, (type name, value, key)
+    """
+    # Deal with the value
+    if isinstance(value, bool):
+        tname = 'bool'
+
+    elif isinstance(value, (int, np.integer)):
+        tname = 'float'
+        value = float(value)
+
+    elif isinstance(value, (float, np.floating)):
+        tname = 'float'
+
+    elif isinstance(value, dict):
+        tname = 'object'
+
+    else:
+        tname = 'string'
+        value = str(value)
+
+    return tname, value, key
+
+
 class BrainNet:
     graph: nx.Graph | nx.DiGraph
+    gtGraph: gt.Graph
 
     def __init__(self, dataset: str, directed: bool = False, useCache: bool = True):
         root = op.dirname(__file__)
@@ -31,14 +61,14 @@ class BrainNet:
             csvNodesPath,
             header=0,
             delimiter=";",
-            index_col='id',
+            index_col="id",
             dtype={
-                'pos_x': np.float64,
-                'pos_y': np.float64,
-                'pos_z': np.float64,
-                'degree': np.int32,
-                'isAtSampleBorder': bool     # "np.bool" changed to "bool" to support versions of  numpy after 1.20 
-            }
+                "pos_x": np.float64,
+                "pos_y": np.float64,
+                "pos_z": np.float64,
+                "degree": np.int32,
+                "isAtSampleBorder": np.bool,
+            },
         )
 
         print("Loadin edges...")
@@ -46,18 +76,13 @@ class BrainNet:
             csvEdgesPath,
             header=0,
             delimiter=";",
-            index_col='id',
-            usecols=(
-                'id',
-                'node1id',
-                'node2id',
-                'avgRadiusAvg'
-            ),
+            index_col="id",
+            usecols=("id", "node1id", "node2id", "avgRadiusAvg"),
             dtype={
-                'node1id': np.int32,
-                'node2id': np.int32,
-                'avgRadiusAvg': np.float64
-            }
+                "node1id": np.int32,
+                "node2id": np.int32,
+                "avgRadiusAvg": np.float64,
+            },
         )
 
         print("Normalizing nodes...")
@@ -73,65 +98,67 @@ class BrainNet:
         print("Creating graph...")
         if useCache:
             if directed:
-                cachePath = op.join(root, "cache", f'{dataset}_dir.pickle')
+                cachePath = op.join(root, "cache", f"{dataset}_dir.pickle")
             else:
-                cachePath = op.join(root, "cache", f'{dataset}_udir.pickle')
+                cachePath = op.join(root, "cache", f"{dataset}_udir.pickle")
 
             try:
-                self.graph = pickle.load(open(cachePath, 'rb'))
+                self.graph = pickle.load(open(cachePath, "rb"))
             except FileNotFoundError:
                 if directed:
                     self.graph = nx.from_pandas_edgelist(
                         df=edges,
-                        source='node1id',
-                        target='node2id',
-                        edge_attr='avgRadiusAvg',
+                        source="node1id",
+                        target="node2id",
+                        edge_attr="avgRadiusAvg",
                         create_using=nx.DiGraph,
                     )
                 else:
                     self.graph = nx.from_pandas_edgelist(
                         df=edges,
-                        source='node1id',
-                        target='node2id',
-                        edge_attr='avgRadiusAvg',
+                        source="node1id",
+                        target="node2id",
+                        edge_attr="avgRadiusAvg",
                         create_using=nx.Graph,
                     )
-                nx.set_node_attributes(self.graph, nodes.to_dict('index'))
+                nx.set_node_attributes(self.graph, nodes.to_dict("index"))
                 if not op.exists(op.join(root, "cache")):
                     os.makedirs(op.join(root, "cache"))
-                pickle.dump(self.graph, open(cachePath, 'wb'))
+                pickle.dump(self.graph, open(cachePath, "wb"))
         else:
             if directed:
                 self.graph = nx.from_pandas_edgelist(
                     df=edges,
-                    source='node1id',
-                    target='node2id',
-                    edge_attr='avgRadiusAvg',
-                    create_using=nx.DiGraph
+                    source="node1id",
+                    target="node2id",
+                    edge_attr="avgRadiusAvg",
+                    create_using=nx.DiGraph,
                 )
             else:
                 self.graph = nx.from_pandas_edgelist(
                     df=edges,
-                    source='node1id',
-                    target='node2id',
-                    edge_attr='avgRadiusAvg',
-                    create_using=nx.Graph
+                    source="node1id",
+                    target="node2id",
+                    edge_attr="avgRadiusAvg",
+                    create_using=nx.Graph,
                 )
-            nx.set_node_attributes(self.graph, nodes.to_dict('index'))
+            nx.set_node_attributes(self.graph, nodes.to_dict("index"))
 
-    def visualize(self, outputFile: str = '', show: bool = True):   
+    def visualize(self, outputFile: str = "", show: bool = True):
         fig, ax = plt.subplots()
-        ax = fig.add_subplot(projection='3d')
+        ax = fig.add_subplot(projection="3d")
 
         print("Graphing...")
         progress = 0
         for source, target, attr in self.graph.edges(data=True):
-            X = [self.graph.nodes[source]['pos_x'], self.graph.nodes[target]['pos_x']]
-            Y = [self.graph.nodes[source]['pos_y'], self.graph.nodes[target]['pos_y']]
-            Z = [self.graph.nodes[source]['pos_z'], self.graph.nodes[target]['pos_z']]
-            ax.plot(X, Y, Z, linewidth=attr['avgRadiusAvg'] * 5, color='red', alpha=0.4)
+            X = [self.graph.nodes[source]["pos_x"], self.graph.nodes[target]["pos_x"]]
+            Y = [self.graph.nodes[source]["pos_y"], self.graph.nodes[target]["pos_y"]]
+            Z = [self.graph.nodes[source]["pos_z"], self.graph.nodes[target]["pos_z"]]
+            ax.plot(X, Y, Z, linewidth=attr["avgRadiusAvg"] * 5, color="red", alpha=0.4)
             if progress % 5000 == 0:
-                print(str(100 * progress / self.graph.number_of_edges()) + "%         \r")
+                print(
+                    str(100 * progress / self.graph.number_of_edges()) + "%         \r"
+                )
             progress += 1
 
         print("Done!")
@@ -142,7 +169,101 @@ class BrainNet:
         if show:
             plt.show()
 
+    def get_gt(self):
+        print("Converting NX graph to GT...")
+        self.gtGraph = gt.Graph(directed=self.graph.is_directed())
+
+        reserved_keys = {"pos"}
+
+        # --- 1. Register Vertex Properties ---
+        nprops = set()
+        # Scan nodes to register properties
+        for node, data in self.graph.nodes(data=True):
+            for key, val in data.items():
+                if key in nprops or key in reserved_keys:
+                    continue
+                tname, _, _ = _get_prop_type(val, key)
+                self.gtGraph.vertex_properties[key] = self.gtGraph.new_vertex_property(tname)
+                nprops.add(key)
+
+        # Store ID explicitly
+        self.gtGraph.vertex_properties["id"] = self.gtGraph.new_vertex_property("string")
+
+        # --- 2. Register Edge Properties ---
+        eprops = set()
+        # Scan edges to register properties (like avgRadiusAvg)
+        if self.graph.number_of_edges() > 0:
+            # We look at the first edge to infer types (assuming homogeneous attributes)
+            # If your graph has sparse attributes, iterate over all edges instead of breaking.
+            for u, v, data in self.graph.edges(data=True):
+                for key, val in data.items():
+                    if key in eprops:
+                        continue
+                    tname, _, _ = _get_prop_type(val, key)
+                    self.gtGraph.edge_properties[key] = self.gtGraph.new_edge_property(tname)
+                    eprops.add(key)
+                break
+
+                # --- 3. Add Vertices ---
+        vertices = {}  # Mapping from NX ID to GT Vertex object
+        for node, data in self.graph.nodes(data=True):
+            v = self.gtGraph.add_vertex()
+            vertices[node] = v
+            self.gtGraph.vp["id"][v] = str(node)
+
+            for key, value in data.items():
+                if key in reserved_keys:
+                    continue
+                # Safely cast value
+                _, casted_val, _ = _get_prop_type(value, key)
+                # Assign to property map
+                self.gtGraph.vp[key][v] = casted_val
+
+        # --- 4. Add Edges ---
+        for u, v, data in self.graph.edges(data=True):
+            if u in vertices and v in vertices:
+                e = self.gtGraph.add_edge(vertices[u], vertices[v])
+
+                # Copy edge attributes
+                for key, value in data.items():
+                    if key in eprops:
+                        _, casted_val, _ = _get_prop_type(value, key)
+                        self.gtGraph.ep[key][e] = casted_val
+
+        # --- 5. Build Position Property ---
+        pos = self.gtGraph.new_vertex_property("vector<double>")
+        for v in self.gtGraph.vertices():
+            pos[v] = [
+                float(self.gtGraph.vp["pos_x"][v]),
+                float(self.gtGraph.vp["pos_y"][v]),
+                float(self.gtGraph.vp["pos_z"][v]),
+            ]
+        self.gtGraph.vp["pos"] = pos
+
+    def draw_gt(self, outputFile: str = "", coords=(0,1)):
+        pos3d = self.gtGraph.vp.pos.get_2d_array(pos=[0, 1, 2])
+        pos2d = pos3d[list(coords), :]
+
+        pos = self.gtGraph.new_vertex_property("vector<double>")
+        pos.set_2d_array(pos2d)
+
+        if outputFile:
+            gt.graph_draw(self.gtGraph,
+                          pos=pos,
+                          vertex_size=5,
+                          edge_pen_width=gt.prop_to_size(self.gtGraph.ep["avgRadiusAvg"], mi=0, ma=5),
+                          output=outputFile)
+
+        else:
+            gt.graph_draw(
+                self.gtGraph,
+                pos=pos,
+                edge_pen_width=gt.prop_to_size(self.gtGraph.ep["avgRadiusAvg"], mi=0, ma=5)
+            )
+
 
 if __name__ == "__main__":
-    brainNet = BrainNet("synthetic_graph_1", directed=False, useCache=False)
-    brainNet.visualize()
+    brainNet = BrainNet("CD1-E_no2", directed=False, useCache=False)
+    brainNet.get_gt()
+    brainNet.draw_gt(outputFile="graph.png")
+    print("done")
