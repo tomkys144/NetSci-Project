@@ -189,7 +189,7 @@ class BrainNet:
         # Store ID explicitly
         self.gtGraph.vertex_properties["id"] = self.gtGraph.new_vertex_property("string")
 
-        # --- 2. Register Edge Properties (New) ---
+        # --- 2. Register Edge Properties ---
         eprops = set()
         # Scan edges to register properties (like avgRadiusAvg)
         if self.graph.number_of_edges() > 0:
@@ -219,7 +219,7 @@ class BrainNet:
                 # Assign to property map
                 self.gtGraph.vp[key][v] = casted_val
 
-        # --- 4. Add Edges (New) ---
+        # --- 4. Add Edges ---
         for u, v, data in self.graph.edges(data=True):
             if u in vertices and v in vertices:
                 e = self.gtGraph.add_edge(vertices[u], vertices[v])

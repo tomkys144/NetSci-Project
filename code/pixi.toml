@@ -17,6 +17,7 @@ matplotlib = ">=3.10.8,<4"
 graph-tool = ">=2.98,<3"
 pyright = ">=1.1.407,<2"
 librsvg = ">=2.60.0,<3"
+aenum = ">=3.1.16,<4"
 
 [feature.pycharm-dev.dependencies]
 pixi-pycharm = ">=0.0.10,<0.0.11"
