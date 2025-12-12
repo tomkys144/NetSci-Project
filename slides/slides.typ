@@ -30,6 +30,10 @@
   - Whole mouse brain vasculature
   - Already preprocessed @suprosanna_2021_5367262
   - Datasets used are CD1-E-2 @Todorov2020311 as production and Synthetic graph 1 @SCHNEIDER20121397 for local development
+  - 17 subdatasets with different sizes
+  - Millions of nodes and edges
+  - Data on the diameter, size and volume of the blood vessels
+  - Free and available at https://github.com/jocpae/VesselGraph?tab=readme-ov-file
 ]
 
 
