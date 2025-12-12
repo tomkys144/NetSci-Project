@@ -240,7 +240,7 @@ class BrainNet:
             ]
         self.gtGraph.vp["pos"] = pos
 
-    def draw_gt(self, outputFile: str = "", coords=(0,1)):
+    def draw_gt(self, outputFile: str = "", coords=(0, 1)):
         pos3d = self.gtGraph.vp.pos.get_2d_array(pos=[0, 1, 2])
         pos2d = pos3d[list(coords), :]
 

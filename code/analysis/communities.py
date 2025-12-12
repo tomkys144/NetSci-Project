@@ -1,5 +1,4 @@
 import graph_tool.all as gt
-from graph_tool.draw import BlockState
 import numpy as np
 
 from brainNet import BrainNet
@@ -18,8 +17,20 @@ def sbm(brainNet: BrainNet, nmcmc=100):
         if (i / nmcmc * 100) % 1 == 0:
             print("Progress: ", (i / nmcmc * 100), "%")
         state.multiflip_mcmc_sweep(beta=np.inf, niter=10)
-        
+
     state.print_summary()
+
+    with open("log.txt", "a") as log:
+        log.write("-- Communities --\n")
+        log.write(f"SBM entropy: {state.entropy()}\n")
+        log.write(f"SBM summary: \n")
+
+        for l, lstate in enumerate(state.levels):
+            log.write(f"l: {l}, N: {lstate.get_N()}, B: {lstate.get_nonempty_B()}\n")
+            if lstate.get_N() == 1:
+                break
+
+        log.close()
 
     return state
 
@@ -32,7 +43,8 @@ def draw_sbm(state, outputFile: str):
         output_size=(1500, 1500),  # Larger size prevents overlapping text/nodes
     )
 
-def draw_sbm_shape(state: gt.NestedBlockState, brainNet: BrainNet, outputFile: str, coords=(0,1), layer=0):
+
+def draw_sbm_shape(state: gt.NestedBlockState, brainNet: BrainNet, outputFile: str, coords=(0, 1), layer=0):
     pstate = state.project_level(layer)
 
     pos3d = brainNet.gtGraph.vp.pos.get_2d_array(pos=[0, 1, 2])
@@ -43,6 +55,7 @@ def draw_sbm_shape(state: gt.NestedBlockState, brainNet: BrainNet, outputFile: s
 
     pstate.draw(
         pos=pos,
+        vertex_size=10,
         output=outputFile,
         output_size=(1500, 1500),
     )
