@@ -23,6 +23,8 @@
   ),
 )
 
+#set cite(style: "ieee")
+
 #title-slide()
 
 
