@@ -21,7 +21,10 @@ def sbm(brainNet: BrainNet, nmcmc=100):
     )
 
     logger.info("Calculating MCMC...")
-    gt.mcmc_anneal(state, beta_range=(1, 10), niter=nmcmc, mcmc_equilibrate_args=dict(force_niter=10))
+    for i in range(nmcmc):
+        if (i / nmcmc * 100) % 1 == 0:
+            logger.info(f"Progress: {i / nmcmc * 100} %")
+        state.multiflip_mcmc_sweep(beta=np.inf, niter=10)
 
     state.print_summary()
 
