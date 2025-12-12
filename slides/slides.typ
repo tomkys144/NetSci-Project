@@ -29,7 +29,7 @@
 #slide(title: [Dataset])[
   - Whole mouse brain vasculature
   - Already preprocessed @suprosanna_2021_5367262
-  - Datasets used are CD1-E-2 @Todorov2020311 as production and Synthetic graph 1 @SCHNEIDER20121397 for local development
+  - Datasets used are CD1-E-2~@Todorov2020311 as production and Synthetic~graph~1~@SCHNEIDER20121397 for local development
 ]
 
 
