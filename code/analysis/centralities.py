@@ -123,6 +123,8 @@ def draw_hist(arr: np.ndarray, output='', xlabel: str = ''):
     else:
         plt.show()
 
+    plt.close()
+
 
 def draw_cdf(arr: np.ndarray, output: str = '', xlabel: str = ''):
     x, counts = np.unique(arr, return_counts=True)
@@ -142,6 +144,8 @@ def draw_cdf(arr: np.ndarray, output: str = '', xlabel: str = ''):
         plt.savefig(output)
     else:
         plt.show()
+
+    plt.close()
 
 
 if __name__ == "__main__":
