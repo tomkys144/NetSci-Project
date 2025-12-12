@@ -1,3 +1,4 @@
+import logging
 import warnings
 
 import matplotlib
@@ -10,6 +11,7 @@ from scipy.stats._continuous_distns import _distn_names
 
 from brainNet import BrainNet
 
+logger = logging.getLogger("ThrombosisAnalysis.edgeStats")
 
 def calc(brainNet: BrainNet, bins, ax=None):
     w = np.array(list(nx.get_edge_attributes(brainNet.graph, 'avgRadiusAvg').values()))
@@ -20,7 +22,7 @@ def calc(brainNet: BrainNet, bins, ax=None):
 
     for ii, dist in enumerate([d for d in _distn_names if not d in ['levy_stable', 'studentized_range']]):
 
-        print("{:>3} / {:<3}: {}".format(ii + 1, len(_distn_names), dist))
+        logger.info("{:>3} / {:<3}: {}".format(ii + 1, len(_distn_names), dist))
 
         distribution = getattr(stats, dist)
 
@@ -82,5 +84,5 @@ if __name__ == "__main__":
     brainNet = BrainNet("synthetic_graph_1")
     dists, w = calc(brainNet, 100)
     bestDist = dists[0]
-    report(bestDist[0], bestDist[1])
+    report(bestDist[0], bestDist[1], bestDist[2])
     print_pdf(bestDist[0], bestDist[1], w)
