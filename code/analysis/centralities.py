@@ -113,6 +113,7 @@ def report(df: pd.DataFrame):
 
 
 def draw_hist(arr: np.ndarray, output='', xlabel: str = ''):
+    plt.figure()
     plt.hist(arr, bins=30)
     plt.xlabel(xlabel)
     plt.ylabel('Count')
@@ -135,6 +136,7 @@ def draw_cdf(arr: np.ndarray, output: str = '', xlabel: str = ''):
     cdf = cdf / cdf[-1]
     cdf = np.insert(cdf, 0, 0.)
 
+    plt.figure()
     plt.plot(x, cdf, drawstyle='steps-post')
 
     plt.xlabel(xlabel)
