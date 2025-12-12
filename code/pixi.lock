@@ -1818,6 +1818,7 @@ packages:
   - matplotlib-base >=3.8
   - pandas >=2.0
   license: BSD-3-Clause
+  license_family: BSD
   size: 1587439
   timestamp: 1765215107045
 - conda: https://conda.anaconda.org/conda-forge/noarch/nodeenv-1.9.1-pyhd8ed1ab_1.conda
