@@ -1,7 +1,11 @@
+import logging
+
 import graph_tool.all as gt
 import numpy as np
 
 from brainNet import BrainNet
+
+logger = logging.getLogger("ThrombosisAnalysis.communities")
 
 
 def sbm(brainNet: BrainNet, nmcmc=100):
@@ -10,26 +14,29 @@ def sbm(brainNet: BrainNet, nmcmc=100):
 
     state = gt.minimize_nested_blockmodel_dl(
         brainNet.gtGraph,
+        state_args=dict(
+            recs=[brainNet.gtGraph.ep.avgRadiusAvg],
+            rec_types=["real-normal"]
+        )
     )
 
-    print("Calculating MCMC...")
-    for i in range(nmcmc):
-        if (i / nmcmc * 100) % 1 == 0:
-            print("Progress: ", (i / nmcmc * 100), "%")
-        state.multiflip_mcmc_sweep(beta=np.inf, niter=10)
+    logger.info("Calculating MCMC...")
+    gt.mcmc_anneal(state, beta_range=(1, 10), niter=nmcmc, mcmc_equilibrate_args=dict(force_niter=10))
 
     state.print_summary()
 
     with open("log.txt", "a") as log:
-        log.write("-- Communities --\n")
-        log.write(f"SBM entropy: {state.entropy()}\n")
-        log.write(f"SBM summary: \n")
+        txt = "-- Communities --\n"
+        txt += f"SBM entropy: {state.entropy()}\n"
+        txt += f"SBM summary: \n"
 
         for l, lstate in enumerate(state.levels):
-            log.write(f"l: {l}, N: {lstate.get_N()}, B: {lstate.get_nonempty_B()}\n")
+            txt += f"l: {l}, N: {lstate.get_N()}, B: {lstate.get_nonempty_B()}\n"
             if lstate.get_N() == 1:
                 break
 
+        print(txt)
+        log.write(txt)
         log.close()
 
     return state

@@ -1,77 +1,116 @@
-import pandas as pd
-import numpy as np
-import networkx as nx
 import matplotlib.pyplot as plt
-from scipy.stats import alpha
+import networkx as nx
+import numpy as np
+import pandas as pd
+import logging
 
 from brainNet import BrainNet
 
+logger = logging.getLogger("ThrombosisAnalysis.centralities")
 
-def calc(brainNet: BrainNet):
-    deg = dict(brainNet.graph.degree)
+_centrality_methods = [
+    'degree',
+    'betweenness',
+    'closeness',
+    'eigenvector',
+    'pagerank',
+]
 
-    print("Calculating eigenvector centrality...")
-    eig = nx.eigenvector_centrality_numpy(brainNet.graph)
 
-    print("Calculating pagerank...")
-    pr = nx.pagerank(brainNet.graph)
+def calc(brainNet: BrainNet, methods=None):
+    if methods is None:
+        methods = _centrality_methods[:]
 
-    print("Calculating betweenness centrality...")
-    btw = nx.betweenness_centrality(brainNet.graph)
+    results = {}
 
-    print("Calculating closeness centrality...")
-    clo = nx.closeness_centrality(brainNet.graph)
+    edge_weight = 'avgRadiusAvg'
 
-    print("Making dataframe...")
-    df = pd.DataFrame()
-    df["node"] = list(deg.keys())
-    df["degree"] = df["node"].map(deg)
-    df["eigenvector"] = df["node"].map(eig)
-    df["pagerank"] = df["node"].map(pr)
-    df["betweenness"] = df["node"].map(btw)
-    df["closeness"] = df["node"].map(clo)
-    df = df.set_index("node")
+    if "degree" in methods:
+        logger.info(f"Computing degree centrality...")
+        try:
+            results['degree'] = dict(brainNet.graph.degree(weight=edge_weight))
+        except Exception as e:
+            logger.error("!! degree centrality failed:", e)
+
+    if "betweenness" in methods:
+        logger.info(f"Computing betweenness centrality...")
+        try:
+            results['betweenness'] = nx.betweenness_centrality(
+                brainNet.graph, weight=edge_weight, normalized=True)
+        except Exception as e:
+            logger.error("!! betweenness failed:", e)
+
+    if "closeness" in methods:
+        logger.info(f"Computing closeness centrality...")
+        try:
+            results['closeness'] = nx.closeness_centrality(
+                brainNet.graph,
+                distance=edge_weight,
+                wf_improved=True
+            )
+        except Exception as e:
+            logger.error("!! closeness failed:", e)
+
+    if "eigenvector" in methods:
+        logger.info(f"Computing eigenvector centrality (max_iter=2000)...")
+        try:
+            results['eigenvector'] = nx.eigenvector_centrality(
+                brainNet.graph, max_iter=2000, weight=edge_weight
+            )
+        except nx.PowerIterationFailedConvergence:
+            logger.warning("\n!! Eigenvector centrality did not converge.")
+            logger.warning("   Falling back to largest connected component...\n")
+
+            # If error this means the graph is not connected, so we need to extracr the largest connected component
+            H = brainNet.graph.subgraph(max(nx.connected_components(brainNet.graph), key=len))
+            # Compute now only in the largest connected component only
+            ev = nx.eigenvector_centrality(H, max_iter=2000, weight=edge_weight)
+            results['eigenvector'] = {n: ev.get(n, 0.0) for n in brainNet.graph.nodes()}
+
+    if "pagerank" in methods:
+        logger.info(f"Computing pagerank....")
+        try:
+            results['pagerank'] = nx.pagerank(brainNet.graph, weight=edge_weight)
+        except Exception as e:
+            logger.error("!! pagerank failed:", e)
+
+    logger.info("Making dataframe...")
+    df = pd.DataFrame(results)
+    df.index.name = 'node_id'
 
     return df
 
-def report(centralities: pd.DataFrame):
+
+def report(df: pd.DataFrame):
     txt = "-- Centralities --\n"
 
-    maxdf = centralities.eq(centralities.max(axis=0), axis=1)
-    mindf = centralities.eq(centralities.min(axis=0), axis=1)
+    desc = df.describe(percentiles=[0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99])
+    txt += f"Summary:\n{desc.to_string()}\n"
 
-    avgDeg = centralities['degree'].mean()
-    avgEig = centralities['eigenvector'].mean()
-    avgPr = centralities['pagerank'].mean()
-    avgBet = centralities['betweenness'].mean()
-    avgClo = centralities['closeness'].mean()
+    txt += "\nUnique (rounded to 8dp):"
+    for col in df.columns:
+        txt += f"\nTop 10 by {col}\n"
+        txt += df[col].nlargest(10).to_string()
 
-    maxDeg = centralities['degree'].max()
-    maxEig = centralities['eigenvector'].max()
-    maxPr = centralities['pagerank'].max()
-    maxBet = centralities['betweenness'].max()
-    maxClo = centralities['closeness'].max()
+    try:
+        txt += "\nPearson correlation:\n"
+        txt += df.corr(method='pearson').to_string()
+    except Exception as e:
+        logger.error("pearson correlation failed:", e)
 
-    minDeg = centralities['degree'].min()
-    minEig = centralities['eigenvector'].min()
-    minPr = centralities['pagerank'].min()
-    minBet = centralities['betweenness'].min()
-    minClo = centralities['closeness'].min()
-
-    txt += f"Stat      | Avg   | Max   | numMax    | Min   | nimMin\n"
-    txt += f"Degree    | {avgDeg}  | {maxDeg}  | {maxdf['degree'].sum()}   | {minDeg}  | {mindf['degree'].sum()}\n"
-    txt += f"EigVec    | {avgEig}  | {maxEig}  | {maxdf['eigenvector'].sum()}   | {minEig}  | {mindf['eigenvector'].sum()}\n"
-    txt += f"PageRank  | {avgPr}  | {maxPr}  | {maxdf['pagerank'].sum()}   | {minPr}  | {mindf['pagerank'].sum()}\n"
-    txt += f"Between   | {avgBet}  | {maxBet}  | {maxdf['betweenness'].sum()}   | {minBet}  | {mindf['betweenness'].sum()}\n"
-    txt += f"Closeness | {avgClo}  | {maxClo}  | {maxdf['closeness'].sum()}   | {minClo}  | {mindf['closeness'].sum()}\n"
+    try:
+        txt += "\nSpearman correlation:\n"
+        txt += df.corr(method='spearman').to_string()
+    except Exception as e:
+        logger.error("Spearman correlation failed:", e)
 
     print(txt)
-
     with open("log.txt", "a") as log:
         log.write(txt)
         log.close()
 
     return
+
 
 def draw_hist(arr: np.ndarray, output='', xlabel: str = ''):
     plt.hist(arr, bins=30)
@@ -83,6 +122,7 @@ def draw_hist(arr: np.ndarray, output='', xlabel: str = ''):
         plt.savefig(output)
     else:
         plt.show()
+
 
 def draw_cdf(arr: np.ndarray, output: str = '', xlabel: str = ''):
     x, counts = np.unique(arr, return_counts=True)
@@ -102,6 +142,7 @@ def draw_cdf(arr: np.ndarray, output: str = '', xlabel: str = ''):
         plt.savefig(output)
     else:
         plt.show()
+
 
 if __name__ == "__main__":
     brainNet = BrainNet("synthetic_graph_1")
