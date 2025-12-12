@@ -104,6 +104,7 @@ def report(df: pd.DataFrame):
     except Exception as e:
         logger.error("Spearman correlation failed:", e)
 
+    txt += "\n"
     print(txt)
     with open("log.txt", "a") as log:
         log.write(txt)

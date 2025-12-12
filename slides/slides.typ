@@ -8,12 +8,11 @@
   institute: [Network Science 2025],
   logo: [#tugraz-logo],
   config-info(
-    title: [Title],
-    subtitle: [An optional short subtitle],
-    authors: ([Tomáš Kysela], [?], [?], [?]),
+    title: [Analysis of brain blood supply and it's resistance to Thrombosis],
+    subtitle: [Empirical Analysis of the Dataset],
+    authors: ([Denis~Dagbert], [Tomáš~Kysela], [Hussain~Miraah~Rasheed], [Muhammad~Zubair]),
     extra: [],
-    footer: [First Author, Second Author, Third Author],
-    download-qr: "https://github.com/tomkys144/NetSci-Project",
+    footer: [Denis~Dagbert, Tomáš~Kysela, Hussain~Miraah~Rasheed, Muhammad~Zubair],
   ),
   config-common(
     handout: true,
@@ -27,12 +26,23 @@
 
 
 #slide(title: [Dataset])[
-  - Something
+  - Whole mouse brain vasculature @Todorov2020311
+  - Already preprocessed @suprosanna_2021_5367262
+  - Dta
 ]
 
 
 
 
 #slide(title: [Bibliography])[
-  #bibliography("bibliography.bib", full: true, style: "ieee")
+  #bibliography("bibliography.bib", style: "ieee")
+
+  #text(size: 24pt, weight: "semibold")[Acknowledgments]
+
+
+  #image(
+    "gh.svg",
+    width: 30%,
+  )
+  Special thanks to #link("https://gamerhost.pro/home")[Gamerhost.pro] for providing computational power.
 ]
