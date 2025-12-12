@@ -13,6 +13,7 @@
     authors: ([Denis~Dagbert], [Tomáš~Kysela], [Hussain~Miraah~Rasheed], [Muhammad~Zubair]),
     extra: [],
     footer: [Denis~Dagbert, Tomáš~Kysela, Hussain~Miraah~Rasheed, Muhammad~Zubair],
+    download-qr: "https://github.com/tomkys144/NetSci-Project/raw/refs/heads/main/slides/slides.pdf",
   ),
   config-common(
     handout: true,
@@ -26,9 +27,9 @@
 
 
 #slide(title: [Dataset])[
-  - Whole mouse brain vasculature @Todorov2020311
+  - Whole mouse brain vasculature
   - Already preprocessed @suprosanna_2021_5367262
-  - Dta
+  - Datasets used are CD1-E-2 @Todorov2020311 as production and Synthetic graph 1 @SCHNEIDER20121397 for local development
 ]
 
 
