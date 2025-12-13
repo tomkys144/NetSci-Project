@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 from aenum import Enum, auto
 
-from analysis import communities, centralities, edgeStats
+from analysis import communities, centralities, edgeStats, clustering
 from brainNet import BrainNet
 
 
@@ -15,6 +15,7 @@ class Task(Enum):
     COMMUNITIES = auto()
     CENTRALITIES = auto()
     EDGE = auto()
+    CLUSTERING = auto()
     DRAW = auto()
 
 
@@ -49,6 +50,9 @@ def main(tasks, dataset: str = "synthetic_graph_1"):
     # Find statistics on edges
     if (Task.ALL in tasks) or (Task.EDGE in tasks):
         edges_task(dataset, brainNet)
+
+    if (Task.ALL in tasks) or (Task.CLUSTERING in tasks):
+        clustering_task(dataset, brainNet)
 
     logging.info("Done")
 
@@ -115,6 +119,12 @@ def edges_task(dataset: str, brainNet: BrainNet):
     edgeStats.report(bestDist[0], bestDist[1], bestDist[2])
     edgeStats.print_pdf(bestDist[0], bestDist[1], w, output=f"../results/pdf-edges-{dataset}.png")
 
+def clustering_task(dataset:str, brainNet: BrainNet):
+    local_clust = clustering.compute_clustering(brainNet)
+
+    clustering.plot(local_clust, f"../results/clustering-local-{dataset}.png")
+    clustering.plot(local_clust, f"../results/clustering-local-{dataset}-log.png")
+
 
 if __name__ == "__main__":
     parser = ArgumentParser(
@@ -128,6 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("--communities", action="store_true", help="Flag to run community detection")
     parser.add_argument("--centralities", action="store_true", help="Flag to run centralities analysis")
     parser.add_argument("--edges", action="store_true", help="Flag to run edge statistics")
+    parser.add_argument("--clustering", action="store_true", help="Flag to run clustering analysis")
     parser.add_argument("--draw", action="store_true", help="Flag to draw raw graph")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
     parser.add_argument("-l", "--log", help="Log file (default is stdout)")
@@ -175,5 +186,7 @@ if __name__ == "__main__":
         tasks.append(Task.DRAW)
     if args.edges:
         tasks.append(Task.EDGES)
+    if args.clustering:
+        tasks.append(Task.CLUSTERING)
 
     main(tasks=tasks, dataset=args.dataset)
