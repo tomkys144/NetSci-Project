@@ -10,6 +10,10 @@ from analysis import communities, centralities, edgeStats
 from brainNet import BrainNet
 
 
+from analysis import communities, centralities, edgeStats
+from brainNet import BrainNet
+
+
 class Task(Enum):
     ALL = auto()
     LOAD = auto()
@@ -38,14 +42,6 @@ def main(tasks, dataset: str = "synthetic_graph_1"):
 
     if (Task.ALL in tasks) or (Task.DRAW in tasks):
         draw(dataset, brainNet)
-
-
-    # Compute and visualize centralities
-    compute_centralities(graph=brainNet.graph,methods=None,weighted=True)
-
-    # Compute clustering coefficients
-    compute_clustering(brainNet=brainNet)
-
 
     # Find communities
     if (Task.ALL in tasks) or (Task.COMMUNITIES in tasks):
