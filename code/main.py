@@ -8,6 +8,7 @@ import comunities
 from brainNet import BrainNet
 from centralities import compute_centralities
 from aenum import Enum, auto
+from Clustering import compute_clustering
 
 class Task(Enum):
     ALL = auto()
@@ -32,6 +33,9 @@ def main(tasks, dataset:str = "synthetic_graph_1"):
 
     # Compute and visualize centralities
     compute_centralities(graph=brainNet.graph,methods=None,weighted=True)
+
+    # Compute clustering coefficients
+    compute_clustering(brainNet=brainNet)
 
 
     # Find communities

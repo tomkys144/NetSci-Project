@@ -3,8 +3,12 @@ import networkx as nx
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import time
+import graph_tool.all as gt
 
-data_set  = "CD1-E_no2"   # can be chanded to thr CD1-E_no2 dataset but it will take hours to compute
+
+
+data_set  = "synthetic_graph_1"   
 
 # Used the 5 centrality methods (These methods were the ones mentione in the recording of class in Teach Center)
 
@@ -14,100 +18,103 @@ centrality_methods = [
     'closeness',
     'eigenvector',
     'pagerank',
+    
 ]
 # Function to compute centralities
 def compute_centralities(dataset=None, graph=None, directed=False, methods=None,
-                         use_cache=True, out_put_csv=None, weighted=True):
+                         use_cache=True, out_put_csv=None, weighted=True, k_betweenness=1000):
 
     # If no methods specified, compute all
     if methods is None:
         methods = centrality_methods[:]
+
+
     # Loading graoh from BrainNet
     print("\n Loading Graph.....\n")
-    if graph is None:
-        bn = BrainNet(dataset, directed, use_cache)
-        G = bn.graph
-    else:
-        G = graph
 
+    bn = BrainNet(dataset, directed, use_cache)
+    bn.get_gt()
+    gtG = bn.gtGraph
+    N = gtG.num_vertices()
 
-    # Check if all nodes are presnet (chech if graph is loaded correctly)
-    node_ids_graph = set(G.nodes())
-    print(f"Graph contains {len(node_ids_graph)} nodes.")
+    print(f"Graph contains {N} nodes.\n")
+
+    weight = gtG.ep["avgRadiusAvg"] if weighted else None
+
 
 
     print("\nComputing centralities.....\n")
     results = {}
 
-    edge_weight = 'avgRadiusAvg'
-    weight_msg  = "(weighted)"
-
     # calculate degreee
     # Th
     if "degree" in methods:
-        print(f"Computing degree centrality {weight_msg}...")
+        print(f"Computing degree centrality...")
         try:     
-            results['degree'] = dict(G.degree(weight=edge_weight))
+            deg = np.array([v.out_degree() + v.in_degree() for v in gtG.vertices()], dtype=np.float32)
+            results["degree"] = deg
         except Exception as e:
             print("!! degree centrality failed:", e)
 
+        
+    #Betweeness
+    start = time.time()
 
-    # betweenness 
     if "betweenness" in methods:
-        print(f"Computing betweenness centrality {weight_msg}...")
+        print(f"Computing betweenness centrality...")
         try:
-            results['betweenness'] = nx.betweenness_centrality(
-                G, weight=edge_weight, normalized=True)
+            between, _ = gt.betweenness(gtG, weight=weight)
+
+            betw_array = np.array([between[v] for v in gtG.vertices()], dtype=np.float32)
+            results["betweenness"] = betw_array
+
+            print(f"Time for betweenness: {time.time() - start:.2f} sec")
         except Exception as e:
             print("!! betweenness failed:", e)
 
     # closeness
     if "closeness" in methods:
-        print(f"Computing closeness centrality {weight_msg}...")
+        print(f"Computing closeness centrality...")
         try:
-            results['closeness'] = nx.closeness_centrality(
-                G,
-                distance=edge_weight,
-                wf_improved=True
-            )
+            closeness = gt.closeness(gtG, weight=weight)
+            close = np.array([closeness[v] for v in gtG.vertices()], dtype=np.float32)
+            results["closeness"] = close
+
         except Exception as e:
             print("!! closeness failed:", e)
 
     # eigenvector
-    # used https://www.geeksforgeeks.org/data-science/eigenvector-centrality-centrality-measure/ as a reference 
     if "eigenvector" in methods:
-        print(f"Computing eigenvector centrality {weight_msg} (max_iter=2000)...")
+        print(f"Computing eigenvector centrality (max_iter=2000)...")
         try:
-            results['eigenvector'] = nx.eigenvector_centrality(
-                G, max_iter=2000, weight=edge_weight
-            )
-        except nx.PowerIterationFailedConvergence:
-            print("\n!! Eigenvector centrality did not converge.")
-            print("   Falling back to largest connected component...\n")
-
-            # If error this means the graph is not connected, so we need to extracr the largest connected component 
-            H = G.subgraph(max(nx.connected_components(G), key=len))
-            # Compute now only in the largest connected component only 
-            ev = nx.eigenvector_centrality(H, max_iter=2000, weight=edge_weight)
-            results['eigenvector'] = {n: ev.get(n, 0.0) for n in G.nodes()}
+            eigen = gt.eigenvector(gtG, weight=weight)[1]
+            eig = np.array([eigen[v] for v in gtG.vertices()], dtype=np.float32)
+            results["eigenvector"] = eig
+        except Exception as e:
+            print("!! eigenvector failed:", e)
 
     #  Pagerank 
     if "pagerank" in methods:
-        print(f"Computing pagerank {weight_msg}....")
+        print(f"Computing pagerank....")
         try:
-            results['pagerank'] = nx.pagerank(G, weight=edge_weight)
+            pager = gt.pagerank(gtG, weight=weight)
+            pr = np.array([pager[v] for v in gtG.vertices()], dtype=np.float32)
+            results["pagerank"] = pr
         except Exception as e:
             print("!! pagerank failed:", e)
 
-    # Create dataframe
+    # convert results to DataFrame
     df = pd.DataFrame(results)
-    df.index.name = 'node_id'
+    df.index.name = "vertex_index"   
 
-    print("\n---Summary Statistics ---\n")
+    print("\n Dicribtive Statistics ---\n")
     print(df.describe().T)
 
-    print("\nPercentiles:")
-    print(df.quantile([0.01,0.05,0.25,0.5,0.75,0.95,0.99]).T)
+    print("\nPearson correlation:")
+    print(df.corr(method="pearson"))
+
+    print("\nSpearman correlation:")
+    print(df.corr(method="spearman"))
 
 
     # The number of unique values for each centrality (rounded to 6 decimal places)
@@ -169,6 +176,6 @@ def compute_centralities(dataset=None, graph=None, directed=False, methods=None,
 
 
 if __name__ == "__main__":
-    df = compute_centralities(data_set, directed=False, methods=None, use_cache=False,
+    Centralities = compute_centralities(data_set, directed=False, methods=None, use_cache=False,
                               out_put_csv=None, weighted=True)
-    print(df)
+    print(Centralities)
