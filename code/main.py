@@ -4,11 +4,6 @@ from datetime import datetime
 
 import numpy as np
 from aenum import Enum, auto
-from Clustering import compute_clustering
-
-from analysis import communities, centralities, edgeStats
-from brainNet import BrainNet
-
 
 from analysis import communities, centralities, edgeStats
 from brainNet import BrainNet
