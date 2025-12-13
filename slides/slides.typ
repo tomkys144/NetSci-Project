@@ -8,12 +8,12 @@
   institute: [Network Science 2025],
   logo: [#tugraz-logo],
   config-info(
-    title: [Title],
-    subtitle: [An optional short subtitle],
-    authors: ([Tomáš Kysela], [?], [?], [?]),
+    title: [Analysis of brain blood supply and it's resistance to Thrombosis],
+    subtitle: [Empirical Analysis of the Dataset],
+    authors: ([Denis~Dagbert], [Tomáš~Kysela], [Hussain~Miraah~Rasheed], [Muhammad~Zubair]),
     extra: [],
-    footer: [First Author, Second Author, Third Author],
-    download-qr: "https://github.com/tomkys144/NetSci-Project",
+    footer: [Denis~Dagbert, Tomáš~Kysela, Hussain~Miraah~Rasheed, Muhammad~Zubair],
+    download-qr: "https://github.com/tomkys144/NetSci-Project/raw/refs/heads/main/slides/slides.pdf",
   ),
   config-common(
     handout: true,
@@ -23,16 +23,33 @@
   ),
 )
 
+#set cite(style: "ieee")
+
 #title-slide()
 
 
 #slide(title: [Dataset])[
-  - Something
+  - Whole mouse brain vasculature
+  - Already preprocessed @suprosanna_2021_5367262
+  - Datasets used are CD1-E-2 @Todorov2020311 as production and Synthetic graph 1 @SCHNEIDER20121397 for local development
+  - 17 subdatasets with different sizes
+  - Millions of nodes and edges
+  - Data on the diameter, size and volume of the blood vessels
+  - Free and available at https://github.com/jocpae/VesselGraph?tab=readme-ov-file
 ]
 
 
 
 
 #slide(title: [Bibliography])[
-  #bibliography("bibliography.bib", full: true, style: "ieee")
+  #bibliography("bibliography.bib", style: "ieee")
+
+  #text(size: 24pt, weight: "semibold")[Acknowledgments]
+
+
+  #image(
+    "gh.svg",
+    width: 30%,
+  )
+  Special thanks to #link("https://gamerhost.pro/home")[Gamerhost.pro] for providing computational power.
 ]

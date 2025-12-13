@@ -1,3 +1,4 @@
+import logging
 import os
 import os.path as op
 import pickle
@@ -6,6 +7,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+
+logger = logging.getLogger("ThrombosisAnalysis.BrainNet")
 
 
 def _normalize_df_by_key(df: pd.DataFrame, key: str) -> pd.DataFrame:
@@ -48,14 +51,15 @@ class BrainNet:
     graph: nx.Graph | nx.DiGraph
     gtGraph: gt.Graph
 
-    def __init__(self, dataset: str, directed: bool = False, useCache: bool = True):
+    def __init__(self, dataset: str, directed: bool = False, useCache: bool = True, v_norm=["pos_x", "pos_y", "pos_z"],
+                 e_norm=[]):
         root = op.dirname(__file__)
         if op.basename(root) != "code":
             raise Exception("Unexpected file location")
         csvEdgesPath = op.join(root, "datasets", dataset, "edges.csv")
         csvNodesPath = op.join(root, "datasets", dataset, "nodes.csv")
 
-        print("Loadin nodes...")
+        logger.info("Loadin nodes...")
         nodes = pd.read_csv(
             csvNodesPath,
             header=0,
@@ -70,7 +74,7 @@ class BrainNet:
             },
         )
 
-        print("Loadin edges...")
+        logger.info("Loadin edges...")
         edges = pd.read_csv(
             csvEdgesPath,
             header=0,
@@ -84,17 +88,15 @@ class BrainNet:
             },
         )
 
-        print("Normalizing nodes...")
-        nodesKeysToNormalize = ["pos_x", "pos_y", "pos_z"]
-        for key in nodesKeysToNormalize:
+        logger.info("Normalizing nodes...")
+        for key in v_norm:
             nodes = _normalize_df_by_key(nodes, key)
 
-        print("Normalizing edges...")
-        edgesKeysToNormalize = ["avgRadiusAvg"]
-        for key in edgesKeysToNormalize:
+        logger.info("Normalizing edges...")
+        for key in e_norm:
             edges = _normalize_df_by_key(edges, key)
 
-        print("Creating graph...")
+        logger.info("Creating graph...")
         if useCache:
             if directed:
                 cachePath = op.join(root, "cache", f"{dataset}_dir.pickle")
@@ -147,7 +149,7 @@ class BrainNet:
         fig, ax = plt.subplots()
         ax = fig.add_subplot(projection="3d")
 
-        print("Graphing...")
+        logger.info("Graphing...")
         progress = 0
         for source, target, attr in self.graph.edges(data=True):
             X = [self.graph.nodes[source]["pos_x"], self.graph.nodes[target]["pos_x"]]
@@ -160,8 +162,6 @@ class BrainNet:
                 )
             progress += 1
 
-        print("Done!")
-
         if outputFile:
             plt.savefig(outputFile)
 
@@ -169,7 +169,7 @@ class BrainNet:
             plt.show()
 
     def get_gt(self):
-        print("Converting NX graph to GT...")
+        logger.info("Converting NX graph to GT...")
         self.gtGraph = gt.Graph(directed=self.graph.is_directed())
 
         reserved_keys = {"pos"}
@@ -239,7 +239,7 @@ class BrainNet:
             ]
         self.gtGraph.vp["pos"] = pos
 
-    def draw_gt(self, outputFile: str = "", coords=(0,1)):
+    def draw_gt(self, outputFile: str = "", coords=(0, 1)):
         pos3d = self.gtGraph.vp.pos.get_2d_array(pos=[0, 1, 2])
         pos2d = pos3d[list(coords), :]
 
