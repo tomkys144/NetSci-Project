@@ -75,33 +75,30 @@ def compute_clustering(brainNet=None, dataset: str = "synthetic_graph_1"):
         log.write(txt)
         log.close()
 
-    return local_clust, global_clust
+    return local_clust
 
-def plot(local_clust, global_clust):
+def plot(local_clust, output="", log = False):
     values = list(local_clust.values())
-    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+    plt.figure()
 
-    
-    axs[0].hist(values, bins=20, color='skyblue', edgecolor='black')
-    axs[0].set_title("Local Clustering Coefficient Distribution (Linear Scale)")
-    axs[0].set_xlabel("Clustering Coefficient") 
-    axs[0].set_ylabel("Number of Nodes")   
-    axs[0].grid(True, linestyle='--', alpha=0.5)
 
-    
+    plt.hist(values, bins=20, color='skyblue', edgecolor='black', log=log)
+    plt.hist(values, bins=20, color='skyblue', edgecolor='black')
+    plt.xlabel("Clustering Coefficient")
+    plt.ylabel("Number of Nodes")
+    plt.grid(True, linestyle='--', alpha=0.5)
 
-    axs[1].hist(values, bins=20, color='lightcoral', edgecolor='black', log=True)
-    axs[1].set_title("Local Clustering Coefficient Distribution (Log Scale)")
-    axs[1].set_xlabel("Clustering Coefficient")  
-    axs[1].set_ylabel("Number of Nodes (log scale)") 
-    axs[1].grid(True, linestyle='--', alpha=0.5)
-
-    fig.tight_layout()
-    plt.show()
+    if output:
+        plt.savefig(output)
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
+    logger.setLevel(logging.INFO)
     brainNet = BrainNet("synthetic_graph_1")
-    compute_clustering(brainNet=brainNet)
+    local_clust = compute_clustering(brainNet=brainNet)
+    plot(local_clust)
+    plot(local_clust, log=True)
 
 
