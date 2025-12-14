@@ -29,7 +29,7 @@
 
 
 #slide(title: [Dataset])[
-  - Whole mouse brain vasculature of CD1-Elite mouse
+  - Whole brain vasculature of CD1-Elite mouse
   - Already preprocessed @suprosanna_2021_5367262
   - Dataset used is CD1-E-2 @Todorov2020311
   - 1 664 811 nodes and 2 150 326 edges
@@ -109,7 +109,7 @@
       caption: [Log-scale],
     ),
 
-    caption: [CLustering coefficient histograms],
+    caption: [Clustering coefficient histograms],
   )
 ]
 
@@ -120,20 +120,13 @@
   - Layer 7 with only 2 communities does not correspond to hemispheres
 
   #grid(
-    columns: (1fr, 1fr),
+    columns: 1fr,
     figure(
       image(
         "img/sbm-CD1-E_no2_radial.png",
-        width: 50%,
+        height: 50%,
       ),
       caption: [Radial view of communities],
-    ),
-    figure(
-      image(
-        "img/sbm-CD1-E_no2-xy.png",
-        width: 50%,
-      ),
-      caption: [XY cut of the graph with community-based coloring of nodes],
     ),
   )
 ]
