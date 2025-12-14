@@ -20,9 +20,11 @@ def calc(brainNet: BrainNet, bins, ax=None):
 
     best_dist = []
 
-    for ii, dist in enumerate([d for d in _distn_names if not d in ['levy_stable', 'studentized_range']]):
+    target_dists = ['norm', 'lognorm', 'exponnorm', 'skewnorm', 't', 'logistic', 'truncnorm', 'foldnorm', 'gennorm']
 
-        logger.info("{:>3} / {:<3}: {}".format(ii + 1, len(_distn_names), dist))
+    for ii, dist in enumerate(target_dists):
+
+        logger.info("{:>3} / {:<3}: {}".format(ii + 1, len(target_dists), dist))
 
         distribution = getattr(stats, dist)
 

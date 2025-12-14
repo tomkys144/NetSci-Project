@@ -78,10 +78,25 @@ def communities_task(dataset: str, brainNet: BrainNet):
     sbmState = communities.sbm(brainNet, nmcmc=1000)
 
     logger.info("Drawing CD results...")
+
     communities.draw_sbm(sbmState, f"../results/sbm-{dataset}.png")
-    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-xy.png", coords=(0, 1), layer=1)
-    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-xz.png", coords=(0, 2), layer=1)
-    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-yz.png", coords=(1, 2), layer=1)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-xy.png", coords=(0, 1), layer=0)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-xz.png", coords=(0, 2), layer=0)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-yz.png", coords=(1, 2), layer=0)
+
+    ommunities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-1-xy.png", coords=(0, 1), layer=1)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-1-xz.png", coords=(0, 2), layer=1)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-1-yz.png", coords=(1, 2), layer=1)
+
+
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-4-xy.png", coords=(0, 1), layer=4)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-4-xz.png", coords=(0, 2), layer=4)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-4-yz.png", coords=(1, 2), layer=4)
+
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-5-xy.png", coords=(0, 1), layer=5)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-5-xz.png", coords=(0, 2), layer=5)
+    communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-5-yz.png", coords=(1, 2), layer=5)
+
 
 
 def centralities_task(dataset: str, brainNet: BrainNet):
@@ -94,10 +109,10 @@ def centralities_task(dataset: str, brainNet: BrainNet):
                            output=f'../results/hist-eigenvector-{dataset}.png')
     centralities.draw_hist(np.array(cent['pagerank']), xlabel='PageRank Centrality',
                            output=f'../results/hist-pagerank-{dataset}.png')
-    centralities.draw_hist(np.array(cent['betweenness']), xlabel='Betweenness Centrality',
-                           output=f'../results/hist-betweenness-{dataset}.png')
-    centralities.draw_hist(np.array(cent['closeness']), xlabel='Closeness Centrality',
-                           output=f'../results/hist-closeness-{dataset}.png')
+    # centralities.draw_hist(np.array(cent['betweenness']), xlabel='Betweenness Centrality',
+    #                        output=f'../results/hist-betweenness-{dataset}.png')
+    # centralities.draw_hist(np.array(cent['closeness']), xlabel='Closeness Centrality',
+    #                        output=f'../results/hist-closeness-{dataset}.png')
 
     centralities.draw_cdf(np.array(cent['degree']), xlabel='Degree',
                           output=f'../results/cdf-degree-{dataset}.png')
@@ -105,10 +120,10 @@ def centralities_task(dataset: str, brainNet: BrainNet):
                           output=f'../results/cdf-eigenvector-{dataset}.png')
     centralities.draw_cdf(np.array(cent['pagerank']), xlabel='PageRank Centrality',
                           output=f'../results/cdf-pagerank-{dataset}.png')
-    centralities.draw_cdf(np.array(cent['betweenness']), xlabel='Betweenness Centrality',
-                          output=f'../results/cdf-betweenness-{dataset}.png')
-    centralities.draw_cdf(np.array(cent['closeness']), xlabel='Closeness Centrality',
-                          output=f'../results/cdf-closeness-{dataset}.png')
+    # centralities.draw_cdf(np.array(cent['betweenness']), xlabel='Betweenness Centrality',
+    #                       output=f'../results/cdf-betweenness-{dataset}.png')
+    # centralities.draw_cdf(np.array(cent['closeness']), xlabel='Closeness Centrality',
+    #                       output=f'../results/cdf-closeness-{dataset}.png')
 
 
 def edges_task(dataset: str, brainNet: BrainNet):
@@ -123,7 +138,7 @@ def clustering_task(dataset:str, brainNet: BrainNet):
     local_clust = clustering.compute_clustering(brainNet)
 
     clustering.plot(local_clust, f"../results/clustering-local-{dataset}.png")
-    clustering.plot(local_clust, f"../results/clustering-local-{dataset}-log.png")
+    clustering.plot(local_clust, f"../results/clustering-local-{dataset}-log.png", log=True)
 
 
 if __name__ == "__main__":
@@ -185,7 +200,7 @@ if __name__ == "__main__":
     if args.draw:
         tasks.append(Task.DRAW)
     if args.edges:
-        tasks.append(Task.EDGES)
+        tasks.append(Task.EDGE)
     if args.clustering:
         tasks.append(Task.CLUSTERING)
 

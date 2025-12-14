@@ -13,11 +13,7 @@ def sbm(brainNet: BrainNet, nmcmc=100):
         brainNet.get_gt()
 
     state = gt.minimize_nested_blockmodel_dl(
-        brainNet.gtGraph,
-        state_args=dict(
-            recs=[brainNet.gtGraph.ep.avgRadiusAvg],
-            rec_types=["real-normal"]
-        )
+        brainNet.gtGraph
     )
 
     logger.info("Calculating MCMC...")
