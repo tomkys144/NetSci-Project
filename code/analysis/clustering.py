@@ -47,11 +47,11 @@ def compute_clustering(brainNet=None, dataset: str = "synthetic_graph_1"):
     logger.info("Generating Erdős-Rényi random graph....")
 
     n = G.number_of_nodes()
-    #m = G.number_of_edges()
+    m = G.number_of_edges()
 
-    #RG = nx.gnm_random_graph(n, m) doesnt account for the dencity
+    RG = nx.gnm_random_graph(n, m) # doesnt account for the dencity
 
-    RG = nx.erdos_renyi_graph(n, density) # Erdős-Rényi random graph with desicty as probability, but does not have same number of edges
+    # RG = nx.erdos_renyi_graph(n, density) # Erdős-Rényi random graph with desicty as probability, but does not have same number of edges
     logger.info(f"Random graph nodes: {RG.number_of_nodes()}, edges: {RG.number_of_edges()}") # to check if it is same as the original
 
     random_global_clust = nx.transitivity(RG)
@@ -83,7 +83,6 @@ def plot(local_clust, output="", log = False):
 
 
     plt.hist(values, bins=20, color='skyblue', edgecolor='black', log=log)
-    plt.hist(values, bins=20, color='skyblue', edgecolor='black')
     plt.xlabel("Clustering Coefficient")
     plt.ylabel("Number of Nodes")
     plt.grid(True, linestyle='--', alpha=0.5)

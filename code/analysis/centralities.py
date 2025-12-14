@@ -10,10 +10,13 @@ logger = logging.getLogger("ThrombosisAnalysis.centralities")
 
 _centrality_methods = [
     'degree',
-    'betweenness',
-    'closeness',
     'eigenvector',
     'pagerank',
+]
+
+_unused_methods = [
+    'betweenness',
+    'closeness',
 ]
 
 
@@ -36,7 +39,7 @@ def calc(brainNet: BrainNet, methods=None):
         logger.info(f"Computing betweenness centrality...")
         try:
             results['betweenness'] = nx.betweenness_centrality(
-                brainNet.graph, weight=edge_weight, normalized=True)
+                brainNet.graph, weight=edge_weight, normalized=True, k=1000)
         except Exception as e:
             logger.error("!! betweenness failed:", e)
 
