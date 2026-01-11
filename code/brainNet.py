@@ -9,7 +9,33 @@ from matplotlib import pyplot as plt
 
 logger = logging.getLogger("ThrombosisAnalysis.BrainNet")
 
+def _fit_to_atlas(df: pd.DataFrame) -> pd.DataFrame:
+    logger.info(f"Transforming coordinates to Allen Mouse Brain Atlas space...")
 
+    atlas_shape = (13200, 800, 11400) #size in microns
+
+    axis_map = {
+        "pos_y": 0,  # AP
+        "pos_z": 1,  # DV
+        "pos_x": 2  # ML
+    }
+
+    new_axis = {}
+
+    for col, axis_idx in axis_map.items():
+        src_min = df[col].min()
+        src_max = df[col].max()
+
+        tgt_max = atlas_shape[axis_idx]
+
+        scale = (tgt_max - 1) / (src_max - src_min)
+        new_axis[axis_idx] = (df[col] - src_min) * scale
+
+    df['pos_x'] = new_axis[0]
+    df['pos_y'] = new_axis[1]
+    df['pos_z'] = new_axis[2]
+
+    return df
 
 def _normalize_df_by_key(df: pd.DataFrame, key: str) -> pd.DataFrame:
     minValue = df[key].min()
@@ -53,7 +79,7 @@ class BrainNet:
     diGraph: nx.DiGraph
     gtDiGraph: gt.Graph
 
-    def __init__(self, dataset: str, v_norm=["pos_x", "pos_y", "pos_z"],
+    def __init__(self, dataset: str, v_norm=[],
                  e_norm=[]):
         root = op.dirname(__file__)
         if op.basename(root) != "code":
@@ -97,6 +123,8 @@ class BrainNet:
         logger.info("Normalizing nodes...")
         for key in v_norm:
             nodes = _normalize_df_by_key(nodes, key)
+
+        nodes = _fit_to_atlas(df=nodes)
 
         logger.info("Normalizing edges...")
         for key in e_norm:

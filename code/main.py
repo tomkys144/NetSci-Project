@@ -2,7 +2,6 @@ import logging
 from argparse import ArgumentParser
 from datetime import datetime
 from klepto.archives import dir_archive
-
 import numpy as np
 from aenum import Enum, auto
 
