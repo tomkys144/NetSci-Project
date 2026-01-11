@@ -1,7 +1,5 @@
 import logging
-import os
 import os.path as op
-import pickle
 
 import graph_tool.all as gt
 import networkx as nx
@@ -10,6 +8,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 logger = logging.getLogger("ThrombosisAnalysis.BrainNet")
+
 
 
 def _normalize_df_by_key(df: pd.DataFrame, key: str) -> pd.DataFrame:
@@ -49,10 +48,12 @@ def _get_prop_type(value, key=None):
 
 
 class BrainNet:
-    graph: nx.Graph | nx.DiGraph
+    graph: nx.Graph
     gtGraph: gt.Graph
+    diGraph: nx.DiGraph
+    gtDiGraph: gt.Graph
 
-    def __init__(self, dataset: str, directed: bool = False, useCache: bool = True, v_norm=["pos_x", "pos_y", "pos_z"],
+    def __init__(self, dataset: str, v_norm=["pos_x", "pos_y", "pos_z"],
                  e_norm=[]):
         root = op.dirname(__file__)
         if op.basename(root) != "code":
@@ -81,13 +82,17 @@ class BrainNet:
             header=0,
             delimiter=";",
             index_col="id",
-            usecols=("id", "node1id", "node2id", "avgRadiusAvg"),
+            usecols=("id", "node1id", "node2id", "avgRadiusAvg", "length"),
             dtype={
                 "node1id": np.int32,
                 "node2id": np.int32,
-                "avgRadiusAvg": np.float64,
+                "avgRadiusAvg": np.float32,
+                "length": np.float32
             },
         )
+
+        edges['capacity'] = (edges['avgRadiusAvg'].astype(np.float64) ** 4) / edges['length'].astype(np.float64)
+        edges.loc[edges["length"] <= 0, "capacity"] = 0.0
 
         logger.info("Normalizing nodes...")
         for key in v_norm:
@@ -98,53 +103,15 @@ class BrainNet:
             edges = _normalize_df_by_key(edges, key)
 
         logger.info("Creating graph...")
-        if useCache:
-            if directed:
-                cachePath = op.join(root, "cache", f"{dataset}_dir.pickle")
-            else:
-                cachePath = op.join(root, "cache", f"{dataset}_udir.pickle")
 
-            try:
-                self.graph = pickle.load(open(cachePath, "rb"))
-            except FileNotFoundError:
-                if directed:
-                    self.graph = nx.from_pandas_edgelist(
-                        df=edges,
-                        source="node1id",
-                        target="node2id",
-                        edge_attr="avgRadiusAvg",
-                        create_using=nx.DiGraph,
-                    )
-                else:
-                    self.graph = nx.from_pandas_edgelist(
-                        df=edges,
-                        source="node1id",
-                        target="node2id",
-                        edge_attr="avgRadiusAvg",
-                        create_using=nx.Graph,
-                    )
-                nx.set_node_attributes(self.graph, nodes.to_dict("index"))
-                if not op.exists(op.join(root, "cache")):
-                    os.makedirs(op.join(root, "cache"))
-                pickle.dump(self.graph, open(cachePath, "wb"))
-        else:
-            if directed:
-                self.graph = nx.from_pandas_edgelist(
-                    df=edges,
-                    source="node1id",
-                    target="node2id",
-                    edge_attr="avgRadiusAvg",
-                    create_using=nx.DiGraph,
-                )
-            else:
-                self.graph = nx.from_pandas_edgelist(
-                    df=edges,
-                    source="node1id",
-                    target="node2id",
-                    edge_attr="avgRadiusAvg",
-                    create_using=nx.Graph,
-                )
-            nx.set_node_attributes(self.graph, nodes.to_dict("index"))
+        self.graph = nx.from_pandas_edgelist(
+            df=edges,
+            source="node1id",
+            target="node2id",
+            edge_attr=["avgRadiusAvg", "length", "capacity"],
+            create_using=nx.Graph,
+        )
+        nx.set_node_attributes(self.graph, nodes.to_dict("index"))
 
     def visualize(self, outputFile: str = "", show: bool = True):
         fig, ax = plt.subplots()
@@ -261,9 +228,71 @@ class BrainNet:
                 edge_pen_width=gt.prop_to_size(self.gtGraph.ep["avgRadiusAvg"], mi=0, ma=5)
             )
 
+    def generate_digraph(self, flow=None):
+        self.diGraph = self.graph.to_directed()
+
+        if hasattr(self, 'gtGraph') and self.gtGraph:
+            g_undirected = self.gtGraph
+            g_directed = gt.Graph(directed=True)
+            g_directed.add_vertex(g_undirected.num_vertices())
+
+            for key, prop in g_undirected.vertex_properties.items():
+                g_directed.vertex_properties[key] = g_directed.new_vertex_property(prop.value_type())
+
+                val_type = prop.value_type()
+
+                if prop.a is not None:
+                    g_directed.vp[key].a = prop.a.copy()
+                elif val_type.startswith("vector"):
+                    if key == "pos":
+                        pos_data = prop.get_2d_array(pos=[0, 1, 2])
+                        g_directed.vp[key].set_2d_array(pos_data)
+                    else:
+                        # Fallback for other vectors (slower but safe)
+                        for i in range(g_undirected.num_vertices()):
+                            g_directed.vp[key][g_directed.vertex(i)] = prop[g_undirected.vertex(i)]
+                else:
+                    for i in range(g_undirected.num_vertices()):
+                        # Get vertex handle by index
+                        v_src = g_undirected.vertex(i)
+                        v_dst = g_directed.vertex(i)
+                        # Copy value
+                        g_directed.vp[key][v_dst] = prop[v_src]
+
+            edge_data = g_undirected.get_edges([
+                g_undirected.ep["avgRadiusAvg"],
+                g_undirected.ep["capacity"],
+                g_undirected.ep["length"]
+            ])
+
+            u = edge_data[:, 0].astype(np.int32)
+            v = edge_data[:, 1].astype(np.int32)
+            radii = edge_data[:, 2]
+            caps = edge_data[:, 3]
+            lens = edge_data[:, 4]
+
+            sources_bi = np.concatenate((u, v))
+            targets_bi = np.concatenate((v, u))
+            radii_bi = np.concatenate((radii, radii))
+            caps_bi = np.concatenate((caps, caps))
+            lens_bi = np.concatenate((lens, lens))
+
+            g_directed.add_edge_list(np.transpose([sources_bi, targets_bi]))
+
+            g_directed.ep["avgRadiusAvg"] = g_directed.new_edge_property("float")
+            g_directed.ep["capacity"] = g_directed.new_edge_property("double")  # double for precision
+            g_directed.ep["length"] = g_directed.new_edge_property("float")
+
+            g_directed.ep["avgRadiusAvg"].get_array()[:] = radii_bi
+            g_directed.ep["capacity"].get_array()[:] = caps_bi
+            g_directed.ep["length"].get_array()[:] = lens_bi
+
+            self.gtDiGraph = g_directed
+            logger.info(f"Generated DiGraph with {g_directed.num_edges()} edges")
+
 
 if __name__ == "__main__":
-    brainNet = BrainNet("CD1-E_no2", directed=False, useCache=False)
+    brainNet = BrainNet("CD1_E_no2")
     brainNet.get_gt()
-    brainNet.draw_gt(outputFile="graph.png")
+    brainNet.generate_digraph()
     print("done")

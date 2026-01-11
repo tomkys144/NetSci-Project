@@ -7,6 +7,9 @@ version = "0.1.0"
 
 [tasks]
 run = "python main.py"
+setup = {args = [
+    {"arg" = "dataset", "default" = "synthetic_graph_1"}
+], cmd = "./setup-dataset.sh {{ dataset }}"}
 
 [dependencies]
 numpy = ">=2.3.5,<3"
@@ -19,6 +22,7 @@ pyright = ">=1.1.407,<2"
 librsvg = ">=2.60.0,<3"
 aenum = ">=3.1.16,<4"
 scipy = ">=1.16.3,<2"
+klepto = ">=0.2.7,<0.3"
 
 [feature.pycharm-dev.dependencies]
 pixi-pycharm = ">=0.0.10,<0.0.11"
