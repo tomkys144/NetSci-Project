@@ -16,7 +16,6 @@ class Task(Enum):
     CENTRALITIES = auto()
     EDGE = auto()
     CLUSTERING = auto()
-    DRAW = auto()
 
 
 def main(tasks, dataset: str = "synthetic_graph_1", imgs: bool = True, cache: bool = True):
@@ -42,7 +41,7 @@ def main(tasks, dataset: str = "synthetic_graph_1", imgs: bool = True, cache: bo
     else:
         brainNet = load(dataset, cache=db)
 
-    if (Task.ALL in tasks) or (Task.DRAW in tasks):
+    if imgs:
         draw(dataset, brainNet)
 
     # Find communities
@@ -200,7 +199,6 @@ if __name__ == "__main__":
     parser.add_argument("--centralities", action="store_true", help="Flag to run centralities analysis")
     parser.add_argument("--edges", action="store_true", help="Flag to run edge statistics")
     parser.add_argument("--clustering", action="store_true", help="Flag to run clustering analysis")
-    parser.add_argument("--draw", action="store_true", help="Flag to draw raw graph")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
     parser.add_argument("-l", "--log", help="Log file (default is stdout)")
     parser.add_argument("-c", "--cache", action="store_true", help="Cache file")
@@ -245,8 +243,6 @@ if __name__ == "__main__":
         tasks.append(Task.COMMUNITIES)
     if args.centralities:
         tasks.append(Task.CENTRALITIES)
-    if args.draw:
-        tasks.append(Task.DRAW)
     if args.edges:
         tasks.append(Task.EDGE)
     if args.clustering:

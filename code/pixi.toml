@@ -23,6 +23,8 @@ librsvg = ">=2.60.0,<3"
 aenum = ">=3.1.16,<4"
 scipy = ">=1.17.0,<2"
 klepto = ">=0.2.7,<0.3"
+scikit-learn = ">=1.8.0,<2"
+pyamg = ">=5.3.0,<6"
 
 [feature.pycharm-dev.dependencies]
 pixi-pycharm = ">=0.0.10,<0.0.11"
