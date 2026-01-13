@@ -27,7 +27,7 @@
   ],
   logo: square(stroke: none)[
     #set align(horizon)
-    #image("TU_Graz.svg", width: 100%)
+    #image("img/TU_Graz.svg", width: 100%)
   ],
   text-relative-width: 75%,
 )
@@ -36,28 +36,15 @@
   #pop.column-box(heading: "Columbidae")[
     'Columbidae is a bird family consisting of doves and pigeons.
     It is the only family in the order Columbiformes.'
-    #cite(<wiki:Columbidae>)
 
     #figure(caption: [
-      Pink-necked green pigeon #cite(<wiki:File:Treron_vernans_male_-_Kent_Ridge_Park.jpg>).
+      Pink-necked green pigeon.
     ])[
-      #image("Treron_vernans_male_-_Kent_Ridge_Park.jpg", width: 40%)
     ]
   ]
 
-  // These properties will be given to the function which is responsible for creating the heading
-  #let hba = pop.uni-fr.heading-box-args
-  #hba.insert("stroke", (paint: gradient.linear(green, red, blue), thickness: 10pt))
-
-  // and these are for the body.
-  #let bba = pop.uni-fr.body-box-args
-  #bba.insert("inset", 30pt)
-  #bba.insert("stroke", (paint: gradient.linear(green, red, blue), thickness: 10pt))
-
   #pop.column-box(
     heading: "Biological Information",
-    heading-box-args: hba,
-    body-box-args: bba,
   )[
     #table(
       columns: (auto, 1fr),
@@ -93,7 +80,6 @@
       The poster from the thumbnail can be viewed at the documentation website as well.
     ])[
       #link("https://jonaspleyer.github.io/peace-of-posters/")[
-        #image("thumbnail.png", width: 50%)
       ]
     ]
   ]
@@ -101,8 +87,7 @@
   #colbreak()
 
   #pop.column-box(heading: "General Relativity")[
-    Einstein's brilliant theory of general relativity
-    starts with the field equations #cite(<Einstein1916>).
+    Einstein's brilliant theory of general relativity.
     $ G_(mu nu) + Lambda g_(mu nu) = kappa T_(mu nu) $
     However, they have nothing to do with doves.
   ]
@@ -112,9 +97,7 @@
       'Doves [...] are used in many settings as symbols of peace, freedom or love.
       Doves appear in the symbolism of Judaism, Christianity, Islam and paganism, and of both
       military and pacifist groups.'
-      #cite(<wiki:Doves_as_symbols>).
     ])[
-      #image("peace-dove.png")
     ]
   ]
 
@@ -122,23 +105,41 @@
     Pigeon is a French word that derives from the Latin pīpiō, for a 'peeping' chick,
     while dove is an ultimately Germanic word, possibly referring to the bird's diving flight.
     The English dialectal word culver appears to derive from Latin columba
-    #cite(<wiki:Online_Etymology_Dictionary>).
-    A group of doves is called a "dule", taken from the French word deuil ('mourning')
-    @Lipton1991-qa.
+    A group of doves is called a "dule", taken from the French word deuil ('mourning').
   ]
 
   #pop.column-box()[
-    #bibliography("bibliography.bib")
-  ]
-
-  #pop.column-box(heading: "Fill space with a box", stretch-to-next: true)[
-    Notice that this box would not fill the entire space up to the bottom of the page but we
-    can stretch it such that it does so anyway.
+    #bibliography("bibliography.bib", full: true, style: "ieee")
   ]
 ])
 
-#pop.bottom-box()[
-  Bottom Boxes are displayed at the bottom of a page.
-  #linebreak()
-  Download more RAM: #link("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+#pop.bottom-box(
+  heading-box-args: (
+    fill: white,
+    stroke: (
+      top: .1em + rgb("#e4154b"),
+    ),
+    outset: (top: .2em),
+  ),
+  heading-text-args: (
+    fill: rgb("#e4154b"),
+  ),
+)[
+  #align(center)[
+    #align(horizon)[
+      Computational resources provided by #linebreak()
+      #box(inset: (right: 1em, left: 1em, rest: .2em))[
+        #image(
+          "img/gh.svg",
+          height: 2em,
+        )
+      ]
+      #box(inset: (right: 1em, left: 1em, rest: .2em))[
+        #image(
+          "img/metacentrum.svg",
+          height: 2em,
+        )
+      ]
+    ]
+  ]
 ]
