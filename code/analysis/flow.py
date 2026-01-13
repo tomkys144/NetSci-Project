@@ -4,7 +4,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pyamg
-from klepto.archives import dir_archive
 from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
 
@@ -20,7 +19,7 @@ def _get_largest_component(G):
     return G.subgraph(largest_cc_nodes).copy()
 
 
-def _find_inlet_outlets(G: nx.Graph, radius_percentile=99.0):
+def _find_inlet_outlets(G: nx.Graph, radius_percentile=99.5):
     G_clean = _get_largest_component(G)
     nodes = pd.DataFrame.from_dict(dict(G_clean.nodes(data=True)), orient='index')
     edges = nx.to_pandas_edgelist(G_clean)
@@ -58,9 +57,11 @@ def _find_inlet_outlets(G: nx.Graph, radius_percentile=99.0):
 
     return inlets, outlets
 
-def calculate_flow_physics(brainNet: BrainNet, P_in=100.0, P_out=0.0):
+
+def calculate_flow_physics(brainNet: BrainNet, P_in=100.0, P_out=0.0, inlets=None, outlets=None):
     G = brainNet.graph.copy()
-    inlets, outlets = _find_inlet_outlets(G)
+    if (inlets is None) or (outlets is None):
+        inlets, outlets = _find_inlet_outlets(G)
 
     nodes = pd.DataFrame.from_dict(dict(G.nodes(data=True)), orient='index')
     nodes['idx'] = np.arange(len(nodes))
@@ -122,19 +123,54 @@ def calculate_flow_physics(brainNet: BrainNet, P_in=100.0, P_out=0.0):
     flow_map = dict(zip(zip(edges['source'], edges['target']), flows))
     nx.set_edge_attributes(G, flow_map, "flow")
 
-    return G
+    return G, inlets, outlets
+
+
+def calculate_stats(G_pre: nx.Graph, G_post: nx.Graph, inlets, outlets, threshold_ratio=0.4):
+    edges_pre = nx.to_pandas_edgelist(G_pre)
+    edges_post = nx.to_pandas_edgelist(G_post)
+
+    edges = pd.merge(
+        edges_pre[['source', 'target', 'flow']],
+        edges_post[['source', 'target', 'flow']],
+        on=['source', 'target'],
+        suffixes=('_pre', '_post'),
+        how='inner'
+    )
+
+    is_inlet_edge = edges['source'].isin(inlets) | edges['target'].isin(inlets)
+
+    CBF_pre = edges.loc[is_inlet_edge, 'flow_pre'].abs().sum()
+    CBF_post = edges.loc[is_inlet_edge, 'flow_post'].abs().sum()
+
+    CBF_drop = (CBF_pre + CBF_post) / CBF_pre if CBF_pre > 1e-9 else 0.0
+
+    # Hypoperfusion
+    abs_pre = edges['flow_pre'].abs()
+    abs_post = edges['flow_post'].abs()
+
+    hypo_mask = abs_post < (abs_pre * threshold_ratio)
+
+    # Flow reversal
+    sign_mask = np.sign(edges['flow_pre']) != np.sign(edges['flow_post'])
+    flow_mask = (abs_pre > 1e-12) & (abs_post > 1e-12)
+
+    reversal_mask = sign_mask & flow_mask
+
+    return {
+        "baseline_flow": CBF_pre,
+        "post_obstruction_flow": CBF_post,
+        "global_cbf_drop": CBF_drop * 100,
+        "hypoperfused_vessel": hypo_mask,
+        "hypoperfused_vessel_fraction": hypo_mask.mean(),
+        "flow_reversal": reversal_mask,
+        "flow_reversal_fraction": reversal_mask.mean()
+    }
 
 
 if __name__ == "__main__":
     dataset = "CD1_E_no2"
-    db = dir_archive('../cache/' + dataset, {}, cached=False, compression=5, protocol=-1)
-    db.load()
-    if not 'brainNet' in db.keys():
-        brainNet = BrainNet(dataset)
-        brainNet.get_gt()
-
-        # db['brainNet'] = brainNet
-    else:
-        brainNet = db['brainNet']
+    brainNet = BrainNet(dataset)
+    brainNet.get_gt()
 
     calculate_flow_physics(brainNet)

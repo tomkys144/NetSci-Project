@@ -82,9 +82,9 @@ def load(dataset: str, load_gt=False, cache = None):
 
 def draw(dataset: str, brainNet: BrainNet):
     logger.info("Printing raw graph...")
-    brainNet.draw_gt(f"../results/graph-{dataset}-xy.png", coords=(0, 1))
-    brainNet.draw_gt(f"../results/graph-{dataset}-xz.png", coords=(0, 2))
-    brainNet.draw_gt(f"../results/graph-{dataset}-yz.png", coords=(1, 2))
+    brainNet.draw_gt(f"results/graph-{dataset}-xy.png", coords=(0, 1))
+    brainNet.draw_gt(f"results/graph-{dataset}-xz.png", coords=(0, 2))
+    brainNet.draw_gt(f"results/graph-{dataset}-yz.png", coords=(1, 2))
 
 
 def communities_task(dataset: str, brainNet: BrainNet, imgs: bool = True, cache = None):
@@ -100,23 +100,23 @@ def communities_task(dataset: str, brainNet: BrainNet, imgs: bool = True, cache 
     if imgs:
         logger.info("Drawing CD results...")
 
-        communities.draw_sbm(sbmState, f"../results/sbm-{dataset}.png")
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-xy.png", coords=(0, 1), layer=0)
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-xz.png", coords=(0, 2), layer=0)
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-yz.png", coords=(1, 2), layer=0)
+        communities.draw_sbm(sbmState, f"results/sbm-{dataset}.png")
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-xy.png", coords=(0, 1), layer=0)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-xz.png", coords=(0, 2), layer=0)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-yz.png", coords=(1, 2), layer=0)
 
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-1-xy.png", coords=(0, 1), layer=1)
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-1-xz.png", coords=(0, 2), layer=1)
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-1-yz.png", coords=(1, 2), layer=1)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-1-xy.png", coords=(0, 1), layer=1)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-1-xz.png", coords=(0, 2), layer=1)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-1-yz.png", coords=(1, 2), layer=1)
 
 
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-4-xy.png", coords=(0, 1), layer=4)
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-4-xz.png", coords=(0, 2), layer=4)
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-4-yz.png", coords=(1, 2), layer=4)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-4-xy.png", coords=(0, 1), layer=4)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-4-xz.png", coords=(0, 2), layer=4)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-4-yz.png", coords=(1, 2), layer=4)
 
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-5-xy.png", coords=(0, 1), layer=5)
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-5-xz.png", coords=(0, 2), layer=5)
-        communities.draw_sbm_shape(sbmState, brainNet, f"../results/sbm-{dataset}-5-yz.png", coords=(1, 2), layer=5)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-5-xy.png", coords=(0, 1), layer=5)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-5-xz.png", coords=(0, 2), layer=5)
+        communities.draw_sbm_shape(sbmState, brainNet, f"results/sbm-{dataset}-5-yz.png", coords=(1, 2), layer=5)
 
 
 
@@ -133,22 +133,22 @@ def centralities_task(dataset: str, brainNet: BrainNet, imgs: bool = True, cache
 
     if imgs:
         centralities.draw_hist(np.array(cent['degree']), xlabel='Degree',
-                               output=f'../results/hist-degree-{dataset}.png')
+                               output=f'results/hist-degree-{dataset}.png')
         centralities.draw_hist(np.array(cent['eigenvector']), xlabel='Eigenvector Centrality',
-                               output=f'../results/hist-eigenvector-{dataset}.png')
+                               output=f'results/hist-eigenvector-{dataset}.png')
         centralities.draw_hist(np.array(cent['pagerank']), xlabel='PageRank Centrality',
-                               output=f'../results/hist-pagerank-{dataset}.png')
+                               output=f'results/hist-pagerank-{dataset}.png')
         # centralities.draw_hist(np.array(cent['betweenness']), xlabel='Betweenness Centrality',
         #                        output=f'../results/hist-betweenness-{dataset}.png')
         # centralities.draw_hist(np.array(cent['closeness']), xlabel='Closeness Centrality',
         #                        output=f'../results/hist-closeness-{dataset}.png')
 
         centralities.draw_cdf(np.array(cent['degree']), xlabel='Degree',
-                              output=f'../results/cdf-degree-{dataset}.png')
+                              output=f'results/cdf-degree-{dataset}.png')
         centralities.draw_cdf(np.array(cent['eigenvector']), xlabel='Eigenvector Centrality',
-                              output=f'../results/cdf-eigenvector-{dataset}.png')
+                              output=f'results/cdf-eigenvector-{dataset}.png')
         centralities.draw_cdf(np.array(cent['pagerank']), xlabel='PageRank Centrality',
-                              output=f'../results/cdf-pagerank-{dataset}.png')
+                              output=f'results/cdf-pagerank-{dataset}.png')
         # centralities.draw_cdf(np.array(cent['betweenness']), xlabel='Betweenness Centrality',
         #                       output=f'../results/cdf-betweenness-{dataset}.png')
         # centralities.draw_cdf(np.array(cent['closeness']), xlabel='Closeness Centrality',
@@ -170,7 +170,7 @@ def edges_task(dataset: str, brainNet: BrainNet, imgs: bool = True, cache = None
     edgeStats.report(bestDist[0], bestDist[1], bestDist[2])
 
     if imgs:
-        edgeStats.print_pdf(bestDist[0], bestDist[1], w, output=f"../results/pdf-edges-{dataset}.png")
+        edgeStats.print_pdf(bestDist[0], bestDist[1], w, output=f"results/pdf-edges-{dataset}.png")
 
 def clustering_task(dataset:str, brainNet: BrainNet, imgs: bool = True, cache = None):
     if cache and 'clustering' in cache.keys():
@@ -182,8 +182,8 @@ def clustering_task(dataset:str, brainNet: BrainNet, imgs: bool = True, cache = 
             cache['clustering'] = local_clust
 
     if imgs:
-        clustering.plot(local_clust, f"../results/clustering-local-{dataset}.png")
-        clustering.plot(local_clust, f"../results/clustering-local-{dataset}-log.png", log=True)
+        clustering.plot(local_clust, f"results/clustering-local-{dataset}.png")
+        clustering.plot(local_clust, f"results/clustering-local-{dataset}-log.png", log=True)
 
 
 if __name__ == "__main__":
