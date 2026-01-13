@@ -109,8 +109,8 @@
     A group of doves is called a "dule", taken from the French word deuil ('mourning').
   ]
 
-  #pop.column-box()[
-    #bibliography("bibliography.bib", full: true, style: "ieee")
+  #pop.column-box(heading: "Bibliography")[
+    #bibliography("bibliography.bib", full: true, style: "ieee", title: none)
   ]
 ])
 
