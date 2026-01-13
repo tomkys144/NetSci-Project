@@ -25,11 +25,12 @@
     #super("2")?, France
     #super("3")Czech Technical University in Prague,~Czechia
   ],
-  logo: square(stroke: none)[
-    #set align(horizon)
-    #image("img/TU_Graz.svg", width: 100%)
+  logo: square(stroke: none, width: 10em)[
+    #align(horizon)[
+      #image("img/TU_Graz.svg", width: 100%)
+    ]
   ],
-  text-relative-width: 75%,
+  text-relative-width: 80%,
 )
 
 #columns(2, [
@@ -115,7 +116,7 @@
 
 #pop.bottom-box(
   heading-box-args: (
-    fill: white,
+    fill: none,
     stroke: (
       top: .1em + rgb("#e4154b"),
     ),

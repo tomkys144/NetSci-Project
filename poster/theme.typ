@@ -19,12 +19,13 @@
     font: ("Arial", "Libertinus Serif"),
   ),
   "title-box-args": (
-    inset: (left: 2em, rest: 1em),
-    fill: white,
+    inset: (left: 2em, right: 0em, rest: 1em),
+    fill: none,
     stroke: (
       left: 1em + rgb("#e4154b"),
     ),
     outset: (left: -0.5em),
+    width: 100%,
   ),
   "title-text-args": (
     fill: black,
