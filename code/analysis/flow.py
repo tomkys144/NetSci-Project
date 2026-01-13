@@ -15,11 +15,11 @@ logger = logging.getLogger("ThrombosisAnalysis.flow")
 def _get_largest_component(G):
     if not G:
         return G
-    largest_cc_nodes = max(nx.weakly_connected_components(G), key=len)
+    largest_cc_nodes = max(nx.weakly_connected_components(G.to_directed()), key=len)
     return G.subgraph(largest_cc_nodes).copy()
 
 
-def _find_inlet_outlets(G: nx.Graph, radius_percentile=99.5):
+def find_inlet_outlets(G: nx.Graph, radius_percentile=99.5):
     G_clean = _get_largest_component(G)
     nodes = pd.DataFrame.from_dict(dict(G_clean.nodes(data=True)), orient='index')
     edges = nx.to_pandas_edgelist(G_clean)
@@ -58,18 +58,12 @@ def _find_inlet_outlets(G: nx.Graph, radius_percentile=99.5):
     return inlets, outlets
 
 
-def calculate_flow_physics(brainNet: BrainNet, P_in=100.0, P_out=0.0, inlets=None, outlets=None):
-    G = brainNet.graph.copy()
-    if (inlets is None) or (outlets is None):
-        inlets, outlets = _find_inlet_outlets(G)
-
-    nodes = pd.DataFrame.from_dict(dict(G.nodes(data=True)), orient='index')
+def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, outlets, P_in=100.0, P_out=0.0):
     nodes['idx'] = np.arange(len(nodes))
     node2idx = nodes['idx'].to_dict()
     N = len(nodes)
 
     logger.info("Building sparse matrix")
-    edges = nx.to_pandas_edgelist(G)
 
     edges['u'] = edges['source'].map(node2idx)
     edges['v'] = edges['target'].map(node2idx)
@@ -112,24 +106,17 @@ def calculate_flow_physics(brainNet: BrainNet, P_in=100.0, P_out=0.0, inlets=Non
     pressure = ml.solve(rhs, tol=1e-5, accel="cg")
 
     logger.info("Mapping results back to graph...")
-    pressure_dict = dict(zip(nodes.index, pressure))
-    nx.set_node_attributes(G, pressure_dict, "pressure")
+    nodes['pressure'] = pressure
 
     p_u = edges['u'].map(lambda x: pressure[x])
     p_v = edges['v'].map(lambda x: pressure[x])
 
-    flows = edges['capacity'] * (p_u - p_v)
+    edges['flow'] = edges['capacity'] * (p_u - p_v)
 
-    flow_map = dict(zip(zip(edges['source'], edges['target']), flows))
-    nx.set_edge_attributes(G, flow_map, "flow")
-
-    return G, inlets, outlets
+    return edges, nodes
 
 
-def calculate_stats(G_pre: nx.Graph, G_post: nx.Graph, inlets, outlets, threshold_ratio=0.4):
-    edges_pre = nx.to_pandas_edgelist(G_pre)
-    edges_post = nx.to_pandas_edgelist(G_post)
-
+def calculate_stats(edges_pre: pd.DataFrame, edges_post: pd.DataFrame, inlets, outlets, threshold_ratio=0.4):
     edges = pd.merge(
         edges_pre[['source', 'target', 'flow']],
         edges_post[['source', 'target', 'flow']],
@@ -138,12 +125,12 @@ def calculate_stats(G_pre: nx.Graph, G_post: nx.Graph, inlets, outlets, threshol
         how='inner'
     )
 
-    is_inlet_edge = edges['source'].isin(inlets) | edges['target'].isin(inlets)
+    is_inlet_edge = edges['source'].isin(outlets) | edges['target'].isin(outlets)
 
     CBF_pre = edges.loc[is_inlet_edge, 'flow_pre'].abs().sum()
     CBF_post = edges.loc[is_inlet_edge, 'flow_post'].abs().sum()
 
-    CBF_drop = (CBF_pre + CBF_post) / CBF_pre if CBF_pre > 1e-9 else 0.0
+    CBF_drop = (CBF_pre - CBF_post) / CBF_pre if CBF_pre > 1e-9 else 0.0
 
     # Hypoperfusion
     abs_pre = edges['flow_pre'].abs()
@@ -164,13 +151,10 @@ def calculate_stats(G_pre: nx.Graph, G_post: nx.Graph, inlets, outlets, threshol
         "hypoperfused_vessel": hypo_mask,
         "hypoperfused_vessel_fraction": hypo_mask.mean(),
         "flow_reversal": reversal_mask,
-        "flow_reversal_fraction": reversal_mask.mean()
+            "flow_reversal_fraction": reversal_mask.mean()
     }
 
 
 if __name__ == "__main__":
     dataset = "CD1_E_no2"
     brainNet = BrainNet(dataset)
-    brainNet.get_gt()
-
-    calculate_flow_physics(brainNet)
