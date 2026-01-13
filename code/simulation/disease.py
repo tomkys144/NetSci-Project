@@ -10,14 +10,14 @@ from brainNet import BrainNet
 logger = logging.getLogger("ThrombosisAnalysis.disease")
 
 
-def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False):
+def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, step_len = 20):
     G = brainNet.graph
 
     nodes = pd.DataFrame.from_dict(dict(G.nodes(data=True)), orient='index')
     edges = nx.to_pandas_edgelist(G)
 
     inlets, outlets = flow.find_inlet_outlets(G)
-    edges, nodes = flow.calculate_flow_physics(edges,nodes, inlets, outlets, 100, 0)
+    edges, nodes = flow.calculate_flow_physics(edges, nodes, inlets, outlets, 100, 0)
 
     if "sediment_state" not in edges.columns:
         edges["sediment_state"] = 0
@@ -29,7 +29,7 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False):
         "flow_reversal_frac": []
     }
 
-    steps_taken = 0
+    iters = 0
     edges_pre = edges
 
     dead = 0
@@ -40,10 +40,10 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False):
         if not active:
             break
 
-        if steps_taken % 100 == 0:
+        if iters % step_len == 0:
             edges_post, nodes_post = flow.calculate_flow_physics(edges_post, nodes, inlets, outlets, 100, 0)
             stats = flow.calculate_stats(edges_pre, edges_post, inlets, outlets)
-            if steps_taken == 0:
+            if iters == 0:
                 stats_history["CBF"].append(stats['baseline_flow'])
 
             stats_history["CBF"].append(stats['post_obstruction_flow'])
@@ -53,13 +53,19 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False):
 
             if stats['post_obstruction_flow'] < stats_history["CBF"][0] * 0.001:
                 dead += 1
-                if dead >= 10: break # No need to continue, brain is dead for at least 1000 steps
+                if dead >= 10: break  # No need to continue, brain is dead for at least 1000 steps
+        else:
+            is_inlet_edge = edges['source'].isin(inlets) | edges['target'].isin(inlets)
+            CBF = edges_post.loc[is_inlet_edge, 'flow'].abs().sum()
+            stats_history["CBF"].append(CBF)
+            stats_history["CBF_drop"].append((stats_history["CBF"][-2] - CBF) / stats_history["CBF"][-2])
 
         edges_pre = edges_post
-        steps_taken += 1
+        iters += 1
 
     logger.info(f"Simulation complete. Syncing {steps_taken} changes back to graph...")
     return stats_history
+
 
 def disease_step(df: pd.DataFrame, random_selection=False, constriction_factor=0.5):
     candidate_mask = (df['sediment_state'] < 2) & (df['flow'] > 0)
@@ -90,11 +96,13 @@ def disease_step(df: pd.DataFrame, random_selection=False, constriction_factor=0
 
         length = df.at[target_idx, 'length']
         if length > 0:
-            df.at[target_idx, 'capacity'] = (new_radius ** 4) / length
+            new_capacity = (new_radius ** 4) / length
+            df.at[target_idx, 'capacity'] = new_capacity
 
     elif current_state == 1:
         df.at[target_idx, 'sediment_state'] = 2
-        df.at[target_idx, 'capacity'] = 1e-12
+        new_capacity = 1e-12
+        df.at[target_idx, 'capacity'] = new_capacity
 
     return True
 

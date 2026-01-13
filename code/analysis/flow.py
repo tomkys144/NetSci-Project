@@ -125,7 +125,7 @@ def calculate_stats(edges_pre: pd.DataFrame, edges_post: pd.DataFrame, inlets, o
         how='inner'
     )
 
-    is_inlet_edge = edges['source'].isin(outlets) | edges['target'].isin(outlets)
+    is_inlet_edge = edges['source'].isin(inlets) | edges['target'].isin(inlets)
 
     CBF_pre = edges.loc[is_inlet_edge, 'flow_pre'].abs().sum()
     CBF_post = edges.loc[is_inlet_edge, 'flow_post'].abs().sum()
