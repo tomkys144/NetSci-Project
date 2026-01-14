@@ -516,3 +516,8 @@ Network Density (D): 0.000636
 Original graph global clustering: 0.007228915662650603
 Random graph global clustering: 0.00045731707317073173
 Clustering ratio (original / random): 15.81
+
+--------------
+Dataset: synthetic_graph_1
+Time: 2026-01-14T17:07:33.455179
+--------------

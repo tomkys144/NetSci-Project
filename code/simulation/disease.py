@@ -19,6 +19,8 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
     inlets, outlets = flow.find_inlet_outlets(G)
     edges, nodes = flow.calculate_flow_physics(edges, nodes, inlets, outlets, 100, 0)
 
+    thresholds = edges['flow'].abs() * 0.4
+
     if "sediment_state" not in edges.columns:
         edges["sediment_state"] = 0
 
@@ -29,12 +31,11 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
         "flow_reversal_frac": []
     }
 
-    iters = 0
     edges_pre = edges
 
     dead = 0
 
-    for _ in range(int(maxIter)):
+    for iters in range(int(maxIter)):
         edges_post = edges_pre.copy()
         active = disease_step(edges_post, random_selection)
         if not active:
@@ -42,7 +43,7 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
 
         if iters % step_len == 0:
             edges_post, nodes_post = flow.calculate_flow_physics(edges_post, nodes, inlets, outlets, 100, 0)
-            stats = flow.calculate_stats(edges_pre, edges_post, inlets, outlets)
+            stats = flow.calculate_stats(edges_pre, edges_post, inlets, outlets, thresholds)
             if iters == 0:
                 stats_history["CBF"].append(stats['baseline_flow'])
 
@@ -61,9 +62,8 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
             stats_history["CBF_drop"].append((stats_history["CBF"][-2] - CBF) / stats_history["CBF"][-2])
 
         edges_pre = edges_post
-        iters += 1
 
-    logger.info(f"Simulation complete. Syncing {steps_taken} changes back to graph...")
+    logger.info(f"Simulation complete.")
     return stats_history
 
 
@@ -81,7 +81,10 @@ def disease_step(df: pd.DataFrame, random_selection=False, constriction_factor=0
     if random_selection:
         target_idx = np.random.choice(candidate_indices)
     elif 'flow' in df.columns:
-        target_idx = df.loc[candidate_indices, 'flow'].abs().idxmin()
+        flows = df.loc[candidate_indices, 'flow'].abs()
+        weights = 1.0 / (flows + 1e-12) ** 2
+        probabilities = weights / weights.sum()
+        target_idx = np.random.choice(candidate_indices, p=probabilities)
     else:
         target_idx = np.random.choice(candidate_indices)
 

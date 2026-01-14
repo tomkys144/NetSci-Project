@@ -116,7 +116,7 @@ def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, out
     return edges, nodes
 
 
-def calculate_stats(edges_pre: pd.DataFrame, edges_post: pd.DataFrame, inlets, outlets, threshold_ratio=0.4):
+def calculate_stats(edges_pre: pd.DataFrame, edges_post: pd.DataFrame, inlets, outlets, thresholds):
     edges = pd.merge(
         edges_pre[['source', 'target', 'flow']],
         edges_post[['source', 'target', 'flow']],
@@ -136,7 +136,7 @@ def calculate_stats(edges_pre: pd.DataFrame, edges_post: pd.DataFrame, inlets, o
     abs_pre = edges['flow_pre'].abs()
     abs_post = edges['flow_post'].abs()
 
-    hypo_mask = abs_post < (abs_pre * threshold_ratio)
+    hypo_mask = abs_post <  thresholds
 
     # Flow reversal
     sign_mask = np.sign(edges['flow_pre']) != np.sign(edges['flow_post'])
@@ -151,7 +151,7 @@ def calculate_stats(edges_pre: pd.DataFrame, edges_post: pd.DataFrame, inlets, o
         "hypoperfused_vessel": hypo_mask,
         "hypoperfused_vessel_fraction": hypo_mask.mean(),
         "flow_reversal": reversal_mask,
-            "flow_reversal_fraction": reversal_mask.mean()
+        "flow_reversal_fraction": reversal_mask.mean()
     }
 
 
