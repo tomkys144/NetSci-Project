@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 echo "Dataset: $1"
 
 if [ $1 == "synthetic_graph_1" ]; then
