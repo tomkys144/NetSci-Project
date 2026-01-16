@@ -34,83 +34,55 @@
 )
 
 #columns(2, [
-  #pop.column-box(heading: "Columbidae")[
-    'Columbidae is a bird family consisting of doves and pigeons.
-    It is the only family in the order Columbiformes.'
-
-    #figure(caption: [
-      Pink-necked green pigeon.
-    ])[
-    ]
+  #pop.column-box(heading: "Abstract")[
+    This study simulates thrombosis within high-resolution brain microvascular networks to evaluate regional vulnerability[cite: 12]. We model blood flow using sparse matrix solvers and track the spatiotemporal progression of hypoperfusion.
   ]
 
-  #pop.column-box(
-    heading: "Biological Information",
-  )[
+  #pop.column-box(heading: "Network Topology")[
+    The dataset (CD1-E_no2) consists of a complex graph where nodes represent vessel junctions and edges represent vessel segments.
+    #figure(
+      image("img/sbm-CD1-E_no2_radial.png", height: 15em),
+      caption: [Radial Stochastic Block Model (SBM) showing the community structure of the brain network.],
+    )
+    - *Degree Distribution:* Most nodes exhibit a degree of 1–3, consistent with biological branching.
+    - *Connectivity:* Inlets and outlets are identified via K-Means clustering on ventral and dorsal coordinates.
+  ]
+
+  #pop.column-box(heading: "Flow Simulation Methods")[
+    where conductance is calculated via Poiseuille's law[cite: 41, 42].
     #table(
       columns: (auto, 1fr),
-      inset: 0.5cm,
-      stroke: (x, y) => if y >= 0 { (bottom: 0.2pt + black) },
-      [Domain], [Eukaryota],
-      [Kingdom], [Animalia],
-      [Phylum], [Chordata],
-      [Class], [Aves],
-      [Clade], [Columbimorphae],
-      [Order], [Columbiformes],
-      [Family], [Columbidae],
-      [Type genus], [Columba],
+      inset: 0.4cm,
+      stroke: (y: 0.2pt + black),
+      [Inlet Pressure ($P_{i n}$)], [100.0],
+      [Outlet Pressure ($P_{o u t}$)], [0.0],
+      [Critical Threshold], [40% Flow Reduction],
     )
-
-    This box is styled differently compared to the others.
-    To make such changes persistent across the whole poster, we can use these functions:
-    ```typst
-    #pop.update-poster-layout(...)
-    #pop.update-theme()
-    ```
   ]
 
-  #pop.column-box(heading: "Peace of Posters Documentation")[
-    You can find more information on the documentation site under
-    #text(fill: red)[
-      #link("https://jonaspleyer.github.io/peace-of-posters/")[
-        jonaspleyer.github.io/peace-of-posters/
-      ]
-    ].
-
-    #figure(caption: [
-      The poster from the thumbnail can be viewed at the documentation website as well.
-    ])[
-      #link("https://jonaspleyer.github.io/peace-of-posters/")[
-      ]
-    ]
+  #pop.column-box(heading: "CBF & Hypoperfusion Evolution")[
+    #figure(
+      // This would be a line chart of stats_history["CBF_drop"] vs Iterations
+      image("img/placeholder.jpg", height: 15em),
+      caption: [Global CBF reduction and hypoperfused vessel fraction over simulation time.],
+    )
+    - **Primary Phase:** Rapid CBF drop corresponds to the occlusion of high-PageRank "hub" vessels.
+    - **Secondary Phase:** Slower decay as the network utilizes collateral pathways (high clustering) to maintain flow in peripheral nodes.
+    - *Critical Failure:* The point where the 40% hypoperfusion threshold is reached in the "centerpiece" slices.
   ]
 
-  #colbreak()
-
-  #pop.column-box(heading: "General Relativity")[
-    Einstein's brilliant theory of general relativity.
-    $ G_(mu nu) + Lambda g_(mu nu) = kappa T_(mu nu) $
-    However, they have nothing to do with doves.
+  #pop.column-box(heading: "Spatiotemporal Vulnerability")[
+    #figure(
+      image("img/placeholder.jpg", height: 15em),
+      caption: [3D Sliced Map: Color represents the simulation steps required for a 'pixel' to reach the 40% hypoperfusion threshold (Ischemic Penumbra).],
+    )
+    This visualization tracks the evolution of ischemic clusters over simulation time.
   ]
 
-  #pop.column-box(heading: "Peace be with you")[
-    #figure(caption: [
-      'Doves [...] are used in many settings as symbols of peace, freedom or love.
-      Doves appear in the symbolism of Judaism, Christianity, Islam and paganism, and of both
-      military and pacifist groups.'
-    ])[
-    ]
-  ]
-
-  #pop.column-box(heading: "Etymology")[
-    Pigeon is a French word that derives from the Latin pīpiō, for a 'peeping' chick,
-    while dove is an ultimately Germanic word, possibly referring to the bird's diving flight.
-    The English dialectal word culver appears to derive from Latin columba
-    A group of doves is called a "dule", taken from the French word deuil ('mourning').
-  ]
-
-  #pop.column-box(heading: "Bibliography")[
-    #bibliography("bibliography.bib", full: true, style: "ieee", title: none)
+  #pop.column-box(heading: "Results & Discussion")[
+    - *Global CBF Drop:* Tracking total flow reduction as thrombosis propagates.
+    - *PageRank Centrality:* Higher centrality nodes correlate with faster regional failure.
+    - *Redundancy:* High local clustering provides alternative pathways, delaying the onset of critical hypoperfusion.
   ]
 ])
 
@@ -126,21 +98,21 @@
     fill: rgb("#e4154b"),
   ),
 )[
-  #align(center)[
-    #align(horizon)[
-      Computational resources provided by #linebreak()
-      #box(inset: (right: 1em, left: 1em, rest: .2em))[
-        #image(
-          "img/gh.svg",
-          height: 2em,
-        )
-      ]
-      #box(inset: (right: 1em, left: 1em, rest: .2em))[
-        #image(
-          "img/metacentrum.svg",
-          height: 2em,
-        )
-      ]
-    ]
-  ]
+  #grid(
+    columns: (2fr, 2fr),
+    // Left for logos/resources, Right for bibliography
+    align(top + left)[
+      #set text(size: 1em)
+      *Computational resources:* #linebreak() #v(.2em)
+      #box(height: 1.5em)[#image("img/gh.svg", height: 2em)] #h(1em)
+      #box(height: 1.5em)[#image("img/metacentrum.svg", height: 2em)]
+    ],
+    align(top + left)[
+      #set text(size: 1em) // Small font for bibliography to save space
+      *Bibliography:* #linebreak() #v(.4em)
+      #set text(size: 0.4em)
+      #show bibliography: set block(spacing: 0.1em)
+      #bibliography("bibliography.bib", full: true, style: "ieee", title: none)
+    ],
+  )
 ]
