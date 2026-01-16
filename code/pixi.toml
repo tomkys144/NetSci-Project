@@ -11,6 +11,7 @@ setup = {args = [
     {"arg" = "dataset", "default" = "synthetic_graph_1"}
 ], cmd = "./setup-dataset.sh {{ dataset }}"}
 
+
 [dependencies]
 numpy = ">=2.4.1,<3"
 pandas = ">=2.3.3,<3"
@@ -32,6 +33,13 @@ pixi-pycharm = ">=0.0.10,<0.0.11"
 [feature.dev.dependencies]
 black = "*"
 
+[feature.bundle-conda.pypi-dependencies]
+pixi-to-conda-lock = "*"
+
+[feature.bundle-conda.tasks]
+bundle-conda = "pixi-to-conda-lock pixi.lock --environment default"
+
 [environments]
 pycharm-dev = ["pycharm-dev"]
 dev = { features = ["dev"], solve-group = "default" }
+bundle-conda = { features = ["bundle-conda"], solve-group = "default"}

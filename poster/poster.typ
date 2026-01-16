@@ -92,7 +92,7 @@
     stroke: (
       top: .1em + rgb("#e4154b"),
     ),
-    outset: (top: .2em),
+    outset: (top: .1em),
   ),
   heading-text-args: (
     fill: rgb("#e4154b"),
@@ -102,12 +102,14 @@
     columns: (2fr, 2fr),
     // Left for logos/resources, Right for bibliography
     align(top + left)[
+      #v(0.8cm)
       #set text(size: 1em)
       *Computational resources:* #linebreak() #v(.2em)
       #box(height: 1.5em)[#image("img/gh.svg", height: 2em)] #h(1em)
       #box(height: 1.5em)[#image("img/metacentrum.svg", height: 2em)]
     ],
     align(top + left)[
+      #v(0.8cm)
       #set text(size: 1em) // Small font for bibliography to save space
       *Bibliography:* #linebreak() #v(.4em)
       #set text(size: 0.35em)
