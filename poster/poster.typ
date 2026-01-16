@@ -5,13 +5,13 @@
 #pop.set-poster-layout(pop.layout-a0)
 #pop.set-theme(theme.tug)
 #set text(size: pop.layout-a0.at("body-size"))
-#let box-spacing = 1.2em
+#let box-spacing = 0.8em
 #set columns(gutter: box-spacing)
 #set block(spacing: box-spacing)
 #pop.update-poster-layout(spacing: box-spacing)
 
 #pop.title-box(
-  "Analysis of brain blood supply and it's resistance to Thrombosis",
+  "Mapping Ischemic Risk in Large-Scale Brain Microvasculature",
   subtitle: "Network Science 2025",
   authors: [
     Denis~Dagbert#super("1,2"),
@@ -21,7 +21,7 @@
   ],
   institutes: [
     #set text(fill: black, weight: "regular", size: .75em)
-    #super("1")Graz University of Technology, Austria
+    #super("1")Graz University of Technology,~Austria
     #super("2")?, France
     #super("3")Czech Technical University in Prague,~Czechia
   ],
@@ -110,7 +110,7 @@
     align(top + left)[
       #set text(size: 1em) // Small font for bibliography to save space
       *Bibliography:* #linebreak() #v(.4em)
-      #set text(size: 0.4em)
+      #set text(size: 0.35em)
       #show bibliography: set block(spacing: 0.1em)
       #bibliography("bibliography.bib", full: true, style: "ieee", title: none)
     ],
