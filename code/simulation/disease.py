@@ -10,7 +10,7 @@ from brainNet import BrainNet
 logger = logging.getLogger("ThrombosisAnalysis.disease")
 
 
-def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, step_len = 20):
+def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, step_len = 20, hypo_thr = 0.4):
     G = brainNet.graph
 
     nodes = pd.DataFrame.from_dict(dict(G.nodes(data=True)), orient='index')
@@ -18,6 +18,24 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
 
     inlets, outlets = flow.find_inlet_outlets(G)
     edges, nodes = flow.calculate_flow_physics(edges, nodes, inlets, outlets, 100, 0)
+
+    edges = edges.merge(nodes[['cube_x', 'cube_y', 'cube_z']], left_on='source', right_index=True) \
+        .merge(nodes[['cube_x', 'cube_y', 'cube_z']], left_on='target', right_index=True, suffixes=('_src', '_tgt'))
+
+    edges['edge_cube_x'] = edges[['cube_x_src', 'cube_x_tgt']].min(axis=1)
+    edges['edge_cube_y'] = edges[['cube_y_src', 'cube_y_tgt']].min(axis=1)
+    edges['edge_cube_z'] = edges[['cube_z_src', 'cube_z_tgt']].min(axis=1)
+
+    edges.drop(columns=['cube_x_src', 'cube_x_tgt', 'cube_y_src', 'cube_y_tgt', 'cube_z_src', 'cube_z_tgt'])
+
+    cube_sz = np.array([nodes['cube_x'].max(), nodes['cube_y'].max(), nodes['cube_z'].max()]).astype(int) + 1
+
+    sum_grid = np.zeros(cube_sz)
+    count_grid = np.zeros(cube_sz)
+
+    ex = edges['edge_cube_x'].values.astype(int)
+    ey = edges['edge_cube_y'].values.astype(int)
+    ez = edges['edge_cube_z'].values.astype(int)
 
     thresholds = edges['flow'].abs() * 0.4
 
@@ -29,7 +47,8 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
         "CBF_drop": [],
         "hypo_frac": [],
         "flow_reversal_frac": [],
-        "cubes_state": []
+        "cubes_state": [],
+        "hypo_time": np.full(cube_sz, -1)
     }
 
     edges_pre = edges
@@ -53,7 +72,16 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
             stats_history["hypo_frac"].append(stats['hypoperfused_vessel_fraction'])
             stats_history["flow_reversal_frac"].append(stats['flow_reversal_fraction'])
 
-            #stats_history['cubes_state'].append()
+            sum_grid.fill(0)
+            count_grid.fill(0)
+
+            np.add.at(sum_grid, (ex, ey, ez), stats['hypoperfused_vessel'].values.astype(float))
+            np.add.at(count_grid, (ex, ey, ez), 1.0)
+
+            cube_percentages = np.divide(sum_grid, count_grid, out=np.zeros_like(sum_grid), where=count_grid != 0)
+
+            hit_mask = (cube_percentages >= hypo_thr) & (stats_history["hypo_time"] == -1)
+            stats_history["hypo_time"][hit_mask] = iters
 
             if stats['post_obstruction_flow'] < stats_history["CBF"][0] * 0.001:
                 dead += 1
