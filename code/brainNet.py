@@ -5,16 +5,17 @@ import graph_tool.all as gt
 import networkx as nx
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+
+from plot_style import *
 
 logger = logging.getLogger("ThrombosisAnalysis.BrainNet")
+
 
 def _fit_to_atlas(df: pd.DataFrame) -> pd.DataFrame:
     logger.info(f"Transforming coordinates to Allen Mouse Brain Atlas space...")
 
-    atlas_shape = (13200, 8000, 11400) #size in microns
-    cube_size = (1320, 1000, 1000) #size in microns of subsections
-
+    atlas_shape = (13200, 8000, 11400)  # size in microns
+    cube_size = (1320, 1000, 1000)  # size in microns of subsections
 
     axis_map = {
         "pos_y": 0,  # Anterior - Posterior
@@ -37,11 +38,12 @@ def _fit_to_atlas(df: pd.DataFrame) -> pd.DataFrame:
     df['pos_y'] = new_axis[1]
     df['pos_z'] = new_axis[2]
 
-    df['cube_x'] = df['pos_x']//cube_size[0]
-    df['cube_y'] = df['pos_y']//cube_size[1]
-    df['cube_z'] = df['pos_z']//cube_size[2]
+    df['cube_x'] = df['pos_x'] // cube_size[0]
+    df['cube_y'] = df['pos_y'] // cube_size[1]
+    df['cube_z'] = df['pos_z'] // cube_size[2]
 
     return df
+
 
 def _normalize_df_by_key(df: pd.DataFrame, key: str) -> pd.DataFrame:
     minValue = df[key].min()
@@ -148,8 +150,18 @@ class BrainNet:
         nx.set_node_attributes(self.graph, nodes.to_dict("index"))
 
     def visualize(self, outputFile: str = "", show: bool = True):
-        fig, ax = plt.subplots()
-        ax = fig.add_subplot(projection="3d")
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+        plt.style.use(plt_style)
+
+        plt_style.update({
+            'lines.marker': '',  # No marker by default
+            'lines.markersize': 0,  # Size 0
+            'lines.markeredgewidth': 0,  # No edges
+        })
+        plt.rcParams.update(plt_style)
+
+        ax.grid(False)
 
         logger.info("Graphing...")
         progress = 0
@@ -157,12 +169,20 @@ class BrainNet:
             X = [self.graph.nodes[source]["pos_x"], self.graph.nodes[target]["pos_x"]]
             Y = [self.graph.nodes[source]["pos_y"], self.graph.nodes[target]["pos_y"]]
             Z = [self.graph.nodes[source]["pos_z"], self.graph.nodes[target]["pos_z"]]
-            ax.plot(X, Y, Z, linewidth=attr["avgRadiusAvg"] * 5, color="red", alpha=0.4)
+            ax.plot(Z, X, Y, linewidth=attr["avgRadiusAvg"] * 0.5, color="red", alpha=0.4, marker="")
             if progress % 5000 == 0:
                 print(
                     str(100 * progress / self.graph.number_of_edges()) + "%         \r"
                 )
             progress += 1
+
+        ax.set_zlabel(r"Dorsal <-> Ventral ($\mu m$)", fontsize=10, labelpad=10)
+        ax.set_xlabel(r"Left <-> Right ($\mu m$)", fontsize=10, labelpad=10)
+        ax.set_ylabel(r"Anterior <-> Posterior ($\mu m$)", fontsize=10, labelpad=10)
+
+        ax.set_xlim(0, 11400)
+        ax.set_ylim(0, 13200)
+        ax.set_zlim(0, 8000)
 
         if outputFile:
             plt.savefig(outputFile)
@@ -253,13 +273,34 @@ class BrainNet:
                           pos=pos,
                           vertex_size=5,
                           edge_pen_width=gt.prop_to_size(self.gtGraph.ep["avgRadiusAvg"], mi=0, ma=5),
-                          output=outputFile)
+                          output=outputFile,
+                          # Canvas Style
+                          bg_color=THEME_CREAM,
+                          output_size=(1000, 1000),
+                          # Vertex (Node) Style
+                          vertex_fill_color=THEME_RED,
+                          vertex_color=THEME_DARK,  # Subtle outline
+                          # Edge (Vessel) Style
+                          edge_color=THEME_DARK,
+                          edge_end_marker="none",  # Keeps it looking like biological branching
+                          )
 
         else:
             gt.graph_draw(
                 self.gtGraph,
                 pos=pos,
-                edge_pen_width=gt.prop_to_size(self.gtGraph.ep["avgRadiusAvg"], mi=0, ma=5)
+                edge_pen_width=gt.prop_to_size(self.gtGraph.ep["avgRadiusAvg"], mi=0, ma=5),
+                # Canvas Style
+                bg_color=THEME_CREAM,
+                output_size=(1000, 1000),
+
+                # Vertex (Node) Style
+                vertex_fill_color=THEME_RED,
+                vertex_color=THEME_DARK,  # Subtle outline
+
+                # Edge (Vessel) Style
+                edge_color=THEME_DARK,
+                edge_end_marker="none",  # Keeps it looking like biological branching
             )
 
     def generate_digraph(self, flow=None):
@@ -324,9 +365,9 @@ class BrainNet:
             self.gtDiGraph = g_directed
             logger.info(f"Generated DiGraph with {g_directed.num_edges()} edges")
 
-
 if __name__ == "__main__":
-    brainNet = BrainNet("CD1_E_no2")
+    brainNet = BrainNet("synthetic_graph_1")
     brainNet.get_gt()
-    brainNet.generate_digraph()
+    brainNet.draw_gt("synthetic_graph_1_xy.png")
+    brainNet.visualize("synthetic_graph_1.png")
     print("done")

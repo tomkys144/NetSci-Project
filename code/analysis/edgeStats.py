@@ -7,11 +7,12 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy import stats
-from scipy.stats._continuous_distns import _distn_names
 
 from brainNet import BrainNet
+from plot_style import plt_style
 
 logger = logging.getLogger("ThrombosisAnalysis.edgeStats")
+
 
 def calc(brainNet: BrainNet, bins, ax=None):
     w = np.array(list(nx.get_edge_attributes(brainNet.graph, 'avgRadiusAvg').values()))
@@ -61,6 +62,7 @@ def print_pdf(dist, params, data: np.ndarray, sz=10000, output=''):
 
     dataSeries = pd.Series(data)
     plt.figure()
+    plt.style.use(plt_style)
     dataSeries.plot(kind='hist', bins=50, density=True, alpha=0.5,
                     color=list(matplotlib.rcParams['axes.prop_cycle'])[1]['color'], label='Edge Avg Radius',
                     legend=True)
@@ -70,6 +72,7 @@ def print_pdf(dist, params, data: np.ndarray, sz=10000, output=''):
         plt.savefig(output)
     else:
         plt.show()
+
 
 def report(dist, params, sse):
     txt = "-- Edge Statistics --\n"
@@ -81,6 +84,7 @@ def report(dist, params, sse):
     with open("log.txt", "a") as f:
         f.write(txt)
         f.close()
+
 
 if __name__ == "__main__":
     brainNet = BrainNet("synthetic_graph_1")
