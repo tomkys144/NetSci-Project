@@ -28,7 +28,8 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
         "CBF": [],
         "CBF_drop": [],
         "hypo_frac": [],
-        "flow_reversal_frac": []
+        "flow_reversal_frac": [],
+        "cubes_state": []
     }
 
     edges_pre = edges
@@ -51,6 +52,8 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
             stats_history["CBF_drop"].append(stats['global_cbf_drop'])
             stats_history["hypo_frac"].append(stats['hypoperfused_vessel_fraction'])
             stats_history["flow_reversal_frac"].append(stats['flow_reversal_fraction'])
+
+            #stats_history['cubes_state'].append()
 
             if stats['post_obstruction_flow'] < stats_history["CBF"][0] * 0.001:
                 dead += 1

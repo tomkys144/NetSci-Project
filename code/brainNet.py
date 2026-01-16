@@ -13,6 +13,7 @@ def _fit_to_atlas(df: pd.DataFrame) -> pd.DataFrame:
     logger.info(f"Transforming coordinates to Allen Mouse Brain Atlas space...")
 
     atlas_shape = (13200, 800, 11400) #size in microns
+    cube_size = 800 #size in microns of subsections
 
     axis_map = {
         "pos_y": 0,  # AP
@@ -34,6 +35,9 @@ def _fit_to_atlas(df: pd.DataFrame) -> pd.DataFrame:
     df['pos_x'] = new_axis[0]
     df['pos_y'] = new_axis[1]
     df['pos_z'] = new_axis[2]
+    df['cube_x'] = df['pos_x']//cube_size
+    df['cube_y'] = df['pos_y']//cube_size
+    df['cube_z'] = df['pos_z']//cube_size
 
     return df
 

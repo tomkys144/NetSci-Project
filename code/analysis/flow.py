@@ -117,6 +117,9 @@ def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, out
 
 
 def calculate_stats(edges_pre: pd.DataFrame, edges_post: pd.DataFrame, inlets, outlets, thresholds):
+
+    # here
+
     edges = pd.merge(
         edges_pre[['source', 'target', 'flow']],
         edges_post[['source', 'target', 'flow']],
