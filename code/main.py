@@ -6,6 +6,7 @@ import numpy as np
 from aenum import Enum, auto
 
 from analysis import communities, centralities, edgeStats, clustering
+from simulation import disease
 from brainNet import BrainNet
 
 
@@ -16,6 +17,7 @@ class Task(Enum):
     CENTRALITIES = auto()
     EDGE = auto()
     CLUSTERING = auto()
+    SIMULATION = auto()
 
 
 def main(tasks, dataset: str = "synthetic_graph_1", imgs: bool = True, cache: bool = True):
@@ -56,8 +58,13 @@ def main(tasks, dataset: str = "synthetic_graph_1", imgs: bool = True, cache: bo
     if (Task.ALL in tasks) or (Task.EDGE in tasks):
         edges_task(dataset, brainNet, imgs=imgs, cache=db)
 
+    # Calculate clusters
     if (Task.ALL in tasks) or (Task.CLUSTERING in tasks):
         clustering_task(dataset, brainNet, imgs=imgs, cache=db)
+
+    # Run simulation
+    if (Task.ALL in tasks) or (Task.SIMULATION in tasks):
+        simulation_task(dataset, brainNet, imgs=imgs, cache=db)
 
     if db:
         db.dump()
@@ -185,6 +192,15 @@ def clustering_task(dataset:str, brainNet: BrainNet, imgs: bool = True, cache = 
         clustering.plot(local_clust, f"results/clustering-local-{dataset}.png")
         clustering.plot(local_clust, f"results/clustering-local-{dataset}-log.png", log=True)
 
+def simulation_task(dataset: str, brainNet: BrainNet, imgs: bool = True, cache = None):
+    if cache and 'simulation' in cache.keys():
+        stats = cache['simulation']
+    else:
+        stats = disease.disease_simulation(brainNet, maxIter=1e9, random_selection=False, step_len=20, hypo_thr=0.4)
+
+        if cache:
+            cache['simulation'] = stats
+
 
 if __name__ == "__main__":
     parser = ArgumentParser(
@@ -199,6 +215,7 @@ if __name__ == "__main__":
     parser.add_argument("--centralities", action="store_true", help="Flag to run centralities analysis")
     parser.add_argument("--edges", action="store_true", help="Flag to run edge statistics")
     parser.add_argument("--clustering", action="store_true", help="Flag to run clustering analysis")
+    parser.add_argument("--sim", action="store_true", help="Flag to run simulation")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose mode")
     parser.add_argument("-l", "--log", help="Log file (default is stdout)")
     parser.add_argument("-c", "--cache", action="store_true", help="Cache file")
@@ -247,5 +264,7 @@ if __name__ == "__main__":
         tasks.append(Task.EDGE)
     if args.clustering:
         tasks.append(Task.CLUSTERING)
+    if args.sim:
+        tasks.append(Task.SIMULATION)
 
     main(tasks=tasks, dataset=args.dataset, imgs=args.image, cache=args.cache)

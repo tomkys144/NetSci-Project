@@ -104,14 +104,16 @@
     align(top + left)[
       #v(0.8cm)
       #set text(size: 1em)
-      *Computational resources:* #linebreak() #v(.2em)
-      #box(height: 1.5em)[#image("img/gh.svg", height: 2em)] #h(1em)
-      #box(height: 1.5em)[#image("img/metacentrum.svg", height: 2em)]
+      *Computational resources:* #linebreak()
+      #v(.4em)
+      #box(height: 2em)[#image("img/gh.svg", height: 2em)] #h(1em)
+      #box(height: 2em)[#image("img/metacentrum.svg", height: 2em)]
     ],
     align(top + left)[
       #v(0.8cm)
       #set text(size: 1em) // Small font for bibliography to save space
-      *Bibliography:* #linebreak() #v(.4em)
+      *Bibliography:* #linebreak()
+      #v(.4em)
       #set text(size: 0.35em)
       #show bibliography: set block(spacing: 0.1em)
       #bibliography("bibliography.bib", full: true, style: "ieee", title: none)
