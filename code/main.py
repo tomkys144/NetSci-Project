@@ -76,7 +76,7 @@ def load(dataset: str, load_gt=False, cache = None):
     if cache and 'brainNet' in cache.keys():
         brainNet = cache['brainNet']
     else:
-        brainNet = BrainNet(dataset, v_norm=["pos_x", "pos_y", "pos_z"], e_norm=[])
+        brainNet = BrainNet(dataset, v_norm=[], e_norm=[])
 
     if load_gt:
         brainNet.get_gt()
