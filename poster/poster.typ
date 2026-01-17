@@ -73,7 +73,7 @@
 
   #pop.column-box(heading: "Spatiotemporal Vulnerability")[
     #figure(
-      image("img/placeholder.jpg", height: 15em),
+      image("img/myplot.png", height: 15em),
       caption: [3D Sliced Map: Color represents the simulation steps required for a 'pixel' to reach the 40% hypoperfusion threshold (Ischemic Penumbra).],
     )
     This visualization tracks the evolution of ischemic clusters over simulation time.

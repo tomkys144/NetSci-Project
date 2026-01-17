@@ -1,10 +1,12 @@
+import logging
+
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
-import logging
 
 from brainNet import BrainNet
+from plot_style import plt_style
 
 logger = logging.getLogger("ThrombosisAnalysis.centralities")
 
@@ -118,6 +120,7 @@ def report(df: pd.DataFrame):
 
 def draw_hist(arr: np.ndarray, output='', xlabel: str = ''):
     plt.figure()
+    plt.style.use(plt_style)
     plt.hist(arr, bins=30)
     plt.xlabel(xlabel)
     plt.ylabel('Count')
@@ -141,6 +144,7 @@ def draw_cdf(arr: np.ndarray, output: str = '', xlabel: str = ''):
     cdf = np.insert(cdf, 0, 0.)
 
     plt.figure()
+    plt.style.use(plt_style)
     plt.plot(x, cdf, drawstyle='steps-post')
 
     plt.xlabel(xlabel)
@@ -161,7 +165,8 @@ if __name__ == "__main__":
     report(centralities)
 
     draw_hist(np.array(centralities['degree']), xlabel='Degree')
-    draw_hist(np.array(centralities['eigenvector']), xlabel='Eigenvector Centrality')
+    draw_hist(np.array(centralities['eigenvector']), xlabel='Eigenvector Centrality',
+              output="../../poster/img/myplot.png")
     draw_hist(np.array(centralities['pagerank']), xlabel='PageRank Centrality')
     draw_hist(np.array(centralities['betweenness']), xlabel='Betweenness Centrality')
     draw_hist(np.array(centralities['closeness']), xlabel='Closeness Centrality')
