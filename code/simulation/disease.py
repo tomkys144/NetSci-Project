@@ -6,6 +6,7 @@ import pandas as pd
 
 import analysis.flow as flow
 from brainNet import BrainNet
+from graphing import plot_hypo_time
 
 logger = logging.getLogger("ThrombosisAnalysis.disease")
 
@@ -95,6 +96,7 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
         edges_pre = edges_post
 
     logger.info(f"Simulation complete.")
+    plot_hypo_time(stats_history["hypo_time"])
     return stats_history
 
 
