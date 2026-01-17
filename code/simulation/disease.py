@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 from sklearn.neighbors import KDTree
 
-from analysis import centralities
 import analysis.flow as flow
+from analysis import centralities
 from brainNet import BrainNet
-from graphing import plot_hypo_time
+from simulation.disease_graphing import plot_cbf, plot_hypo_time
 
 logger = logging.getLogger("ThrombosisAnalysis.disease")
 
@@ -84,7 +84,12 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
 
             cube_percentages = np.divide(sum_grid, count_grid, out=np.zeros_like(sum_grid), where=count_grid != 0)
 
-            hit_mask = (cube_percentages >= hypo_thr) & (stats_history["hypo_time"] == -1)
+            current_hypo_mask = (cube_percentages >= hypo_thr)
+
+            recovery_mask = (stats_history["hypo_time"] == (iters - step_len)) & (~current_hypo_mask)
+            stats_history["hypo_time"][recovery_mask] = -1
+
+            hit_mask = current_hypo_mask & (stats_history["hypo_time"] == -1)
             stats_history["hypo_time"][hit_mask] = iters
 
             if anastomosis_thr > 0:
@@ -96,11 +101,17 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
                         edges_post, nodes = flow.calculate_flow_physics(new_edges, nodes, inlets, outlets, 100, 0)
                         dead = 0
 
+                        thresholds[len(thresholds)] = (edges_post['flow'].abs())[len(edges_post) - 1] * 0.4
+
+                        ex = edges_post['edge_cube_x'].values.astype(int)
+                        ey = edges_post['edge_cube_y'].values.astype(int)
+                        ez = edges_post['edge_cube_z'].values.astype(int)
+
             if stats['post_obstruction_flow'] < stats_history["CBF"][0] * 0.001:
                 dead += 1
                 if dead >= 10: break  # No need to continue, brain is dead for at least 1000 steps
         else:
-            is_inlet_edge = edges['source'].isin(inlets) | edges['target'].isin(inlets)
+            is_inlet_edge = edges_post['source'].isin(inlets) | edges_post['target'].isin(inlets)
             CBF = edges_post.loc[is_inlet_edge, 'flow'].abs().sum()
             stats_history["CBF"].append(CBF)
             stats_history["CBF_drop"].append((stats_history["CBF"][-2] - CBF) / stats_history["CBF"][-2])
@@ -155,7 +166,8 @@ def disease_step(df: pd.DataFrame, random_selection=False, constriction_factor=0
     return True
 
 
-def perform_anastomosis(brainNet:BrainNet,nodes: pd.DataFrame, edges: pd.DataFrame,hypo_times: np.ndarray, r_scale:float = 1.1 ):
+def perform_anastomosis(brainNet: BrainNet, nodes: pd.DataFrame, edges: pd.DataFrame, hypo_times: np.ndarray,
+                        r_scale: float = 1.1):
     # 0. Calculate radius
     radius = edges['avgRadiusAvg'].max() * r_scale
 
@@ -182,7 +194,7 @@ def perform_anastomosis(brainNet:BrainNet,nodes: pd.DataFrame, edges: pd.DataFra
         (nodes['cube_x'].isin(cx)) &
         (nodes['cube_y'].isin(cy)) &
         (nodes['cube_z'].isin(cz))
-    ]
+        ]
 
     min_pressure = targets['pressure'].min()
     tgt_indices = targets.index[targets['pressure'] == min_pressure]
@@ -203,7 +215,7 @@ def perform_anastomosis(brainNet:BrainNet,nodes: pd.DataFrame, edges: pd.DataFra
 
     dist = distances[best_idx_in_subset]
 
-    if donor_idx == tgt_idx:
+    if best_donor_node == tgt_idx:
         distances_k2, indices_k2 = donor_tree.query(target_coords, k=2)
 
         donor_idx = donor_candidates[indices_k2[best_idx_in_subset][1]]
@@ -239,12 +251,31 @@ def perform_anastomosis(brainNet:BrainNet,nodes: pd.DataFrame, edges: pd.DataFra
     }
 
     new_row_df = pd.DataFrame([new_edge_row])
-    updated_edges = pd.concat([edges, new_row_df], ignore_index=True)
+    new_row_df.index += len(edges)
+    updated_edges = pd.concat([edges, new_row_df], ignore_index=False)
 
     logger.info(f"Surgical anastomosis created: {best_donor_node} -> {tgt_idx}")
 
     return updated_edges
 
+
 if __name__ == '__main__':
     brainNet = BrainNet('synthetic_graph_1')
-    disease_simulation(brainNet, anastomosis_thr=0.6)
+    # stats = disease_simulation(brainNet, anastomosis_thr=-1)
+    # disease_graphing.plot_hypo_time(stats['hypo_time'])
+
+    CBF = []
+    hypo = []
+    for i in range(2):
+        print(i)
+        stats = disease_simulation(brainNet, anastomosis_thr=-1)
+        CBF.append(stats['CBF'])
+        hypo.append(stats['hypo_time'])
+
+    CBF_a = []
+    for i in range(2):
+        print(i)
+        stats = disease_simulation(brainNet, anastomosis_thr=0.6)
+        CBF_a.append(stats['CBF'])
+
+    plot_cbf(CBF, CBF_a, output='cbf.pdf')

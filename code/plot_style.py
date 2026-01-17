@@ -1,10 +1,15 @@
-import matplotlib.pyplot as plt
-
 from cycler import cycler
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
-THEME_RED = [228/255, 21/255, 75/255, 1]      # #e4154b (Heading fill)
-THEME_CREAM = [238/255, 236/255, 225/255, 1]   # #eeece1 (Body fill)
-THEME_DARK = [0.1, 0.1, 0.1, 1]                # For edges/text
+THEME_RED = [228 / 255, 21 / 255, 75 / 255, 1]  # #e4154b (Heading fill)
+THEME_CREAM = [238 / 255, 236 / 255, 225 / 255, 1]  # #eeece1 (Body fill)
+THEME_DARK = [0.1, 0.1, 0.1, 1]  # For edges/text
+
+colors = ["#e4154b", "#575757", '#9e9e9e']
+tug = LinearSegmentedColormap.from_list('tug', colors)
+mpl.colormaps.register(cmap=tug)
 
 plt_style = {
     'figure.facecolor': '#eeece1',
@@ -12,7 +17,7 @@ plt_style = {
 
     'axes.prop_cycle': cycler(color=['#e4154b', '#1a1a1a', '#575757', '#9e9e9e']),
 
-'font.family': 'sans-serif',
+    'font.family': 'sans-serif',
     'font.sans-serif': ['Arial', 'Liberation Sans', 'DejaVu Sans'],
     'text.color': '#000000',
     'axes.labelcolor': '#000000',
@@ -33,6 +38,8 @@ plt_style = {
     'axes.spines.right': False,
     'axes.spines.left': True,
     'axes.spines.bottom': True,
+
+    'image.cmap': 'tug',
 
     # Export quality
     'savefig.dpi': 300,

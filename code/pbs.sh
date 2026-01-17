@@ -1,8 +1,10 @@
 #!/bin/bash
 #PBS -q default@pbs-m1.metacentrum.cz
 #PBS -l walltime=24:0:0
-#PBS -l select=1:ncpus=8:mem=100gb:scratch_local=50gb
+#PBS -l select=1:ncpus=24:mem=100gb:scratch_local=50gb
 #PBS -N Thrombosis_analysis
+
+
 
 # define a DATADIR variable: directory where the input files are taken from and where the output will be copied to
 DATADIR=/storage/brno12-cerit/home/user123/test_directory # substitute username and path to your real username and path
@@ -11,13 +13,19 @@ DATADIR=/storage/brno12-cerit/home/user123/test_directory # substitute username 
 # this information helps to find a scratch directory in case the job fails, and you need to remove the scratch directory manually
 echo "$PBS_JOBID is running on node `hostname -f` in a scratch directory $SCRATCHDIR" >> $DATADIR/jobs_info.txt
 
+module add mambaforge
+
 test -n "$SCRATCHDIR" || { echo >&2 "Variable SCRATCHDIR is not set!"; exit 1; }
 
 cp $DATADIR/code  $SCRATCHDIR || { echo >&2 "Error while copying input file(s)!"; exit 2; }
 
 cd $SCRATCHDIR
 
-./pixi run run -v -c --log "log.log" -i
+mamba activate --prefix $SCRATCHDIR/env
+
+python main.py --load --sim -v --log log.log -i
+
+mambda deactivate
 
 cp -R results/ $DATADIR/results || { echo >&2 "Result file(s) copying failed (with a code $?) !!"; exit 4; }
 cp -R cache/ $DATADIR/cache || { echo >&2 "Result file(s) copying failed (with a code $?) !!"; exit 5; }

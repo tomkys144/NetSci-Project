@@ -63,7 +63,7 @@ def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, out
     node2idx = nodes['idx'].to_dict()
     N = len(nodes)
 
-    logger.info("Building sparse matrix")
+    logger.debug("Building sparse matrix")
 
     edges['u'] = edges['source'].map(node2idx)
     edges['v'] = edges['target'].map(node2idx)
@@ -100,12 +100,12 @@ def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, out
     A[outlet_idx, outlet_idx] += penalty
     rhs[outlet_idx] += penalty * P_out
 
-    logger.info(f"Solving system for {N} nodes")
+    logger.debug(f"Solving system for {N} nodes")
 
     ml = pyamg.smoothed_aggregation_solver(A)
     pressure = ml.solve(rhs, tol=1e-5, accel="cg")
 
-    logger.info("Mapping results back to graph...")
+    logger.debug("Mapping results back to graph...")
     nodes['pressure'] = pressure
 
     p_u = edges['u'].map(lambda x: pressure[x])
