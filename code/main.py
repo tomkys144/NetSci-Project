@@ -5,11 +5,13 @@ from datetime import datetime
 import numpy as np
 from aenum import Enum, auto
 from klepto.archives import dir_archive
+from concurrent.futures import ProcessPoolExecutor
 
 from analysis import communities, centralities, edgeStats, clustering
 from brainNet import BrainNet
 from simulation import disease, disease_graphing
 
+logger = logging.getLogger('ThrombosisAnalysis')
 
 class Task(Enum):
     ALL = auto()
@@ -44,8 +46,8 @@ def main(tasks, dataset: str = "synthetic_graph_1", imgs: bool = True, cache: bo
     else:
         brainNet = load(dataset, cache=db)
 
-    if imgs:
-        draw(dataset, brainNet)
+    # if imgs:
+        # draw(dataset, brainNet)
 
     # Find communities
     if (Task.ALL in tasks) or (Task.COMMUNITIES in tasks):
@@ -192,27 +194,58 @@ def clustering_task(dataset: str, brainNet: BrainNet, imgs: bool = True, cache=N
         clustering.plot(local_clust, f"results/clustering-local-{dataset}.pdf")
         clustering.plot(local_clust, f"results/clustering-local-{dataset}-log.pdf", log=True)
 
+def run_single_simulation(brainNet, with_anastomosis=False, run:int = 0):
+    # Adjust parameters to match your specific requirements
+    params = {
+        "maxIter": 1e9,
+        "random_selection": False,
+        "step_len": 20000,
+        "hypo_thr": 0.4
+    }
+    if with_anastomosis:
+        params["anastomosis_thr"] = 0.6
 
-def simulation_task(dataset: str, brainNet: BrainNet, imgs: bool = True, cache=None, runs=2):
-    if cache and 'simulation' in cache.keys() and 'simulation-a' in cache.keys():
+    print(f"Starting simulation run {run}")
+
+    return disease.disease_simulation(brainNet, **params)
+
+
+def simulation_task(dataset: str, brainNet: BrainNet, imgs: bool = True, cache=None, runs=6):
+    if cache and 'simulation' in cache.keys():
         stats = cache['simulation']
-        stats_a = cache['simulation-a']
     else:
-        stats = []
-        for run in range(runs):
-            logger.info(f"Running iteration {run} of simulation")
-            stats.append(
-                disease.disease_simulation(brainNet, maxIter=1e9, random_selection=False, step_len=20, hypo_thr=0.4)
-            )
-        stats_a = []
-        for run in range(runs):
-            logger.info(f"Running iteration {run} of simulation with anastomosis")
-            stats_a.append(
-                disease.disease_simulation(brainNet, maxIter=1e9, random_selection=False, step_len=20, hypo_thr=0.4, anastomosis_thr=0.6)
-            )
+        with ProcessPoolExecutor(max_workers=3) as executor:
+            logger.info(f"Launching {runs} parallel iterations (Standard)")
+            # Use list comprehension to create futures for standard simulation
+            futures = [executor.submit(run_single_simulation, brainNet, False, i) for i in range(runs)]
+
+            stats = []
+            for f in futures:
+                try:
+                    result = f.result()
+                    stats.append(result)
+                except Exception as e:
+                    logger.error(f"Anastomosis simulation failed: {e}")
 
         if cache:
             cache['simulation'] = stats
+
+    if cache and 'simulation-a' in cache.keys():
+        stats_a = cache['simulation-a']
+    else:
+        with ProcessPoolExecutor(max_workers=3) as executor:
+            logger.info(f"Launching {runs} parallel iterations (Standard)")
+            # Use list comprehension to create futures for standard simulation
+            futures = [executor.submit(run_single_simulation, brainNet, True, i) for i in range(runs)]
+            stats_a = []
+            for f in futures:
+                try:
+                    result = f.result()
+                    stats_a.append(result)
+                except Exception as e:
+                    logger.error(f"Anastomosis simulation failed: {e}")
+
+        if cache:
             cache['simulation-a'] = stats_a
 
     if imgs:
@@ -262,7 +295,6 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--image", action="store_true", help="Draw images")
 
     args, unknown = parser.parse_known_args()
-    logger = logging.getLogger('ThrombosisAnalysis')
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')

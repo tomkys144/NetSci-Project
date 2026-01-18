@@ -20,9 +20,6 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
     nodes = pd.DataFrame.from_dict(dict(G.nodes(data=True)), orient='index')
     edges = nx.to_pandas_edgelist(G)
 
-    inlets, outlets = flow.find_inlet_outlets(G)
-    edges, nodes = flow.calculate_flow_physics(edges, nodes, inlets, outlets, 100, 0)
-
     edges = edges.merge(nodes[['cube_x', 'cube_y', 'cube_z']], left_on='source', right_index=True) \
         .merge(nodes[['cube_x', 'cube_y', 'cube_z']], left_on='target', right_index=True, suffixes=('_src', '_tgt'))
 
@@ -41,127 +38,179 @@ def disease_simulation(brainNet: BrainNet, maxIter=1e9, random_selection=False, 
     ey = edges['edge_cube_y'].values.astype(int)
     ez = edges['edge_cube_z'].values.astype(int)
 
+    stats_history = {
+        "CBF": [],
+        "hypo_frac": [],
+        "cubes_state": [],
+        "hypo_time": np.full(cube_sz, -1)
+    }
+
+    inlets, outlets = flow.find_inlet_outlets(G)
+    new_edges, new_nodes = flow.calculate_flow_physics(edges, nodes, inlets, outlets, 100, 0)
+    if new_edges is None:
+        logger.warning(f"Simulation run aborted at iteration -1 due to solver failure.")
+        return stats_history
+
+    edges, nodes = new_edges, new_nodes
+
     thresholds = edges['flow'].abs() * 0.4
 
     if "sediment_state" not in edges.columns:
         edges["sediment_state"] = 0
 
-    stats_history = {
-        "CBF": [],
-        "CBF_drop": [],
-        "hypo_frac": [],
-        "flow_reversal_frac": [],
-        "cubes_state": [],
-        "hypo_time": np.full(cube_sz, -1)
-    }
+    if "protected" not in edges.columns:
+        edges["protected"] = 0.
 
-    edges_pre = edges
+    is_outlet_edge = edges['source'].isin(outlets) | edges['target'].isin(outlets)
+    CBF = edges.loc[is_outlet_edge, 'flow'].abs().sum()
+    stats_history["CBF"].append(CBF)
 
     dead = 0
 
-    for iters in range(int(maxIter)):
-        edges_post = edges_pre.copy()
-        active = disease_step(edges_post, random_selection)
-        if not active:
+    sediment_arr = edges['sediment_state'].values
+    radius_arr = edges['avgRadiusAvg'].values
+    capacity_arr = edges['capacity'].values
+    length_arr = edges['length'].values
+    flow_arr = edges['flow'].values
+
+    weights_arr = 1 / (np.abs(flow_arr) + 0.1) ** 2
+    weights_arr += 1e-5
+    weights_arr[sediment_arr >= 2] = 0
+    weights_arr[np.abs(flow_arr) < 1e-12] = 0.0
+
+    for iters in range(int(maxIter // step_len)):
+        current_batch_size = step_len
+        candidate_indices = np.where((sediment_arr < 2) & (weights_arr > 0))[0]
+
+        if len(candidate_indices) == 0: break
+        if len(candidate_indices) < current_batch_size: current_batch_size = len(candidate_indices)
+
+        if random_selection:
+            targets = np.random.choice(candidate_indices, size=current_batch_size, replace=False)
+        else:
+            p = weights_arr[candidate_indices]
+            p = p.astype(np.float64)
+            p_sum = p.sum()
+
+            if p_sum > 0:
+                p /= p_sum
+                # Floating point safety
+                p[-1] = 1.0 - p[:-1].sum()
+                if p[-1] < 0: p[-1] = 0; p /= p.sum()
+
+                targets = np.random.choice(candidate_indices, size=current_batch_size, replace=False, p=p)
+            else:
+                targets = np.random.choice(candidate_indices, size=current_batch_size, replace=False)
+
+        t_s0 = targets[sediment_arr[targets] == 0]
+        t_s1 = targets[sediment_arr[targets] == 1]
+
+        sediment_arr[t_s0] = 1
+        radius_arr[t_s0] *= 0.5
+        capacity_arr[t_s0] = (radius_arr[t_s0] ** 4) / length_arr[t_s0]
+
+        sediment_arr[t_s1] = 2
+        capacity_arr[t_s1] = 1e-12
+
+        edges["sediment_state"] = sediment_arr
+        edges['avgRadiusAvg'] = radius_arr
+        edges['capacity'] = capacity_arr
+
+        new_edges, new_nodes = flow.calculate_flow_physics(edges, nodes, inlets, outlets, 100, 0)
+
+        if new_nodes is None:
+            logger.warning(f"Simulation run aborted at iteration {iters} due to solver failure.")
             break
 
-        if iters % step_len == 0:
-            edges_post, nodes = flow.calculate_flow_physics(edges_post, nodes, inlets, outlets, 100, 0)
-            stats = flow.calculate_stats(edges_pre, edges_post, inlets, outlets, thresholds)
-            if iters == 0:
-                stats_history["CBF"].append(stats['baseline_flow'])
+        edges, nodes = new_edges, new_nodes
 
-            stats_history["CBF"].append(stats['post_obstruction_flow'])
-            stats_history["CBF_drop"].append(stats['global_cbf_drop'])
-            stats_history["hypo_frac"].append(stats['hypoperfused_vessel_fraction'])
-            stats_history["flow_reversal_frac"].append(stats['flow_reversal_fraction'])
+        stats = flow.calculate_stats(edges, inlets, outlets, thresholds)
 
-            sum_grid.fill(0)
-            count_grid.fill(0)
+        stats_history["CBF"].append(stats['flow'])
+        stats_history["hypo_frac"].append(stats['hypoperfused_vessel_fraction'])
 
-            np.add.at(sum_grid, (ex, ey, ez), stats['hypoperfused_vessel'].values.astype(float))
-            np.add.at(count_grid, (ex, ey, ez), 1.0)
+        sum_grid.fill(0)
+        count_grid.fill(0)
 
-            cube_percentages = np.divide(sum_grid, count_grid, out=np.zeros_like(sum_grid), where=count_grid != 0)
+        np.add.at(sum_grid, (ex, ey, ez), stats['hypoperfused_vessel'].values.astype(float))
+        np.add.at(count_grid, (ex, ey, ez), 1.0)
 
-            current_hypo_mask = (cube_percentages >= hypo_thr)
+        cube_percentages = np.divide(sum_grid, count_grid, out=np.zeros_like(sum_grid), where=count_grid != 0)
 
-            recovery_mask = (stats_history["hypo_time"] == (iters - step_len)) & (~current_hypo_mask)
-            stats_history["hypo_time"][recovery_mask] = -1
+        current_hypo_mask = (cube_percentages >= hypo_thr)
 
-            hit_mask = current_hypo_mask & (stats_history["hypo_time"] == -1)
-            stats_history["hypo_time"][hit_mask] = iters
+        recovery_mask = (stats_history["hypo_time"] == (iters - step_len)) & (~current_hypo_mask)
+        stats_history["hypo_time"][recovery_mask] = -1
 
-            if anastomosis_thr > 0:
-                if stats['post_obstruction_flow'] < stats_history['CBF'][0] * anastomosis_thr:
-                    anastomosis_thr = -1.0
-                    new_edges = perform_anastomosis(brainNet, nodes, edges, stats_history['hypo_time'])
+        hit_mask = current_hypo_mask & (stats_history["hypo_time"] == -1)
+        stats_history["hypo_time"][hit_mask] = iters
 
-                    if new_edges is not None:
-                        edges_post, nodes = flow.calculate_flow_physics(new_edges, nodes, inlets, outlets, 100, 0)
-                        dead = 0
+        if anastomosis_thr > 0:
+            if stats['flow'] < stats_history['CBF'][0] * anastomosis_thr:
+                anastomosis_thr = -1.0
+                new_edges = perform_anastomosis(brainNet, nodes, edges, stats_history['hypo_time'])
 
-                        thresholds[len(thresholds)] = (edges_post['flow'].abs())[len(edges_post) - 1] * 0.4
+                if new_edges is not None:
+                    edges, nodes = flow.calculate_flow_physics(new_edges, nodes, inlets, outlets, 100, 0)
+                    dead = 0
 
-                        ex = edges_post['edge_cube_x'].values.astype(int)
-                        ey = edges_post['edge_cube_y'].values.astype(int)
-                        ez = edges_post['edge_cube_z'].values.astype(int)
+                    thresholds[len(thresholds)] = (edges['flow'].abs())[len(edges) - 1] * 0.4
 
-            if stats['post_obstruction_flow'] < stats_history["CBF"][0] * 0.001:
-                dead += 1
-                if dead >= 10: break  # No need to continue, brain is dead for at least 1000 steps
-        else:
-            is_inlet_edge = edges_post['source'].isin(inlets) | edges_post['target'].isin(inlets)
-            CBF = edges_post.loc[is_inlet_edge, 'flow'].abs().sum()
-            stats_history["CBF"].append(CBF)
-            stats_history["CBF_drop"].append((stats_history["CBF"][-2] - CBF) / stats_history["CBF"][-2])
+                    ex = edges['edge_cube_x'].values.astype(int)
+                    ey = edges['edge_cube_y'].values.astype(int)
+                    ez = edges['edge_cube_z'].values.astype(int)
 
-        edges_pre = edges_post
+        if stats['flow'] < stats_history["CBF"][0] * 0.001:
+            dead += 1
+            if dead >= 10: break  # No need to continue, brain is dead for at least 1000 steps
+
+        sediment_arr = edges['sediment_state'].values
+        radius_arr = edges['avgRadiusAvg'].values
+        capacity_arr = edges['capacity'].values
+        length_arr = edges['length'].values
+        flow_arr = edges['flow'].values
+
+        weights_arr = 1 / (np.abs(flow_arr) + 0.1) ** 2
+
+        weights_arr += 1e-5
+
+        weights_arr[sediment_arr >= 2] = 0
+        weights_arr[np.abs(flow_arr) < 1e-12] = 0.0
+
+        print(f"{iters} iters complete. Dead: {dead} | SUM: {weights_arr.sum()}")
 
     logger.info(f"Simulation complete.")
     plot_hypo_time(stats_history["hypo_time"])
     return stats_history
 
 
-def disease_step(df: pd.DataFrame, random_selection=False, constriction_factor=0.5):
-    candidate_mask = (df['sediment_state'] < 2) & (df['flow'] > 0)
+def disease_step(sediment, radius, capacity, length, weights, random_selection=False, constriction_factor=0.5):
+    candidate_indices = np.where((sediment < 2) & (weights > 0))[0]
 
-    if not candidate_mask.any():
-        candidate_mask = (df['sediment_state'] < 2)
-
-    if not candidate_mask.any():
+    if len(candidate_indices) == 0:
         return False
 
-    candidate_indices = df.index[candidate_mask]
+    p = weights[candidate_indices]
+    p_sum = p.sum()
+    if p_sum > 0:
+        p /= p_sum
+        p[-1] = 1.0 - p[:-1].sum()
 
-    if random_selection:
-        target_idx = np.random.choice(candidate_indices)
-    elif 'flow' in df.columns:
-        flows = df.loc[candidate_indices, 'flow'].abs()
-        weights = 1.0 / (flows + 1e-12) ** 2
-        probabilities = weights / weights.sum()
-        target_idx = np.random.choice(candidate_indices, p=probabilities)
+        if p[-1] < 0:
+            p[-1] = 0
+            p /= p.sum()
+
+        target_idx = np.random.choice(candidate_indices, p=p)
     else:
         target_idx = np.random.choice(candidate_indices)
 
-    current_state = df.at[target_idx, 'sediment_state']
-
-    if current_state == 0:
-        df.at[target_idx, 'sediment_state'] = 1
-
-        old_radius = df.at[target_idx, 'avgRadiusAvg']
-        new_radius = old_radius * constriction_factor
-        df.at[target_idx, 'avgRadiusAvg'] = new_radius
-
-        length = df.at[target_idx, 'length']
-        if length > 0:
-            new_capacity = (new_radius ** 4) / length
-            df.at[target_idx, 'capacity'] = new_capacity
-
-    elif current_state == 1:
-        df.at[target_idx, 'sediment_state'] = 2
-        new_capacity = 1e-12
-        df.at[target_idx, 'capacity'] = new_capacity
+    if sediment[target_idx] == 0:
+        sediment[target_idx] = 1
+        radius[target_idx] *= constriction_factor
+        capacity[target_idx] = (radius[target_idx] ** 4) / length[target_idx]
+    elif sediment[target_idx] == 1:
+        sediment[target_idx] = 2
+        capacity[target_idx] = 1e-12
 
     return True
 
@@ -216,12 +265,16 @@ def perform_anastomosis(brainNet: BrainNet, nodes: pd.DataFrame, edges: pd.DataF
     dist = distances[best_idx_in_subset]
 
     if best_donor_node == tgt_idx:
-        distances_k2, indices_k2 = donor_tree.query(target_coords, k=2)
+        distances[best_idx_in_subset] = 1e6
 
-        donor_idx = donor_candidates[indices_k2[best_idx_in_subset][1]]
+        best_idx_in_subset = np.argmin(distances)
+
+        donor_idx = indices[best_idx_in_subset]
         best_donor_node = donor_candidates[donor_idx]
 
-        dist = distances_k2[best_idx_in_subset][1]
+        tgt_idx = tgt_indices[best_idx_in_subset]
+
+        dist = distances[best_idx_in_subset]
 
     # 6. Create the surgical bypass edge
     new_edge = {
@@ -243,7 +296,7 @@ def perform_anastomosis(brainNet: BrainNet, nodes: pd.DataFrame, edges: pd.DataF
         'avgRadiusAvg': float(radius),
         'length': float(dist),
         'capacity': float(new_edge['capacity']),
-        'sediment_state': 0,
+        'sediment_state': -1,
         'flow': 0.0,  # Will be updated in the next flow solver call
         'edge_cube_x': min(nodes.at[best_donor_node, 'cube_x'], nodes.at[tgt_idx, 'cube_x']),
         'edge_cube_y': min(nodes.at[best_donor_node, 'cube_y'], nodes.at[tgt_idx, 'cube_y']),
@@ -275,7 +328,7 @@ if __name__ == '__main__':
     CBF_a = []
     for i in range(2):
         print(i)
-        stats = disease_simulation(brainNet, anastomosis_thr=0.6)
+        stats = disease_simulation(brainNet, anastomosis_thr=0.8)
         CBF_a.append(stats['CBF'])
 
     plot_cbf(CBF, CBF_a, output='cbf.pdf')

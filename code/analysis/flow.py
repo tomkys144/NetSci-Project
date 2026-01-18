@@ -68,8 +68,8 @@ def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, out
     edges['u'] = edges['source'].map(node2idx)
     edges['v'] = edges['target'].map(node2idx)
 
-    edges['capacity'] = edges['capacity'].fillna(1e-12)
-    edges.loc[edges['capacity'] <= 0, 'capacity'] = 1e-12
+    edges['capacity'] = edges['capacity'].fillna(1e-9)
+    edges.loc[edges['capacity'] <= 0, 'capacity'] = 1e-9
 
     u = edges['u'].values
     v = edges['v'].values
@@ -89,7 +89,7 @@ def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, out
 
     A = csr_matrix((all_vals, (all_rows, all_cols)), shape=(N, N))
 
-    penalty = 1e10 * diag_vals.mean()
+    penalty = 1e4 * diag_vals.mean()
     rhs = np.zeros(N)
 
     inlet_idx = nodes.loc[nodes.index.isin(inlets), 'idx'].values
@@ -102,8 +102,13 @@ def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, out
 
     logger.debug(f"Solving system for {N} nodes")
 
-    ml = pyamg.smoothed_aggregation_solver(A)
-    pressure = ml.solve(rhs, tol=1e-5, accel="cg")
+    try:
+        ml = pyamg.smoothed_aggregation_solver(A)
+        pressure = ml.solve(rhs, tol=1e-5, accel="cg")
+    except Exception as e:
+        logger.error(f"Solver failed (likely singular matrix): {e}")
+        # Return None to signal failure to the simulation loop
+        return None, None
 
     logger.debug("Mapping results back to graph...")
     nodes['pressure'] = pressure
@@ -116,45 +121,20 @@ def calculate_flow_physics(edges: pd.DataFrame, nodes: pd.DataFrame, inlets, out
     return edges, nodes
 
 
-def calculate_stats(edges_pre: pd.DataFrame, edges_post: pd.DataFrame, inlets, outlets, thresholds):
+def calculate_stats(edges: pd.DataFrame, inlets, outlets, thresholds):
+    is_outlet_edge = edges['source'].isin(outlets) | edges['target'].isin(outlets)
 
-    # here
-
-    edges = pd.merge(
-        edges_pre[['source', 'target', 'flow']],
-        edges_post[['source', 'target', 'flow']],
-        on=['source', 'target'],
-        suffixes=('_pre', '_post'),
-        how='inner'
-    )
-
-    is_inlet_edge = edges['source'].isin(inlets) | edges['target'].isin(inlets)
-
-    CBF_pre = edges.loc[is_inlet_edge, 'flow_pre'].abs().sum()
-    CBF_post = edges.loc[is_inlet_edge, 'flow_post'].abs().sum()
-
-    CBF_drop = (CBF_pre - CBF_post) / CBF_pre if CBF_pre > 1e-9 else 0.0
+    CBF = edges.loc[is_outlet_edge, 'flow'].abs().sum()
 
     # Hypoperfusion
-    abs_pre = edges['flow_pre'].abs()
-    abs_post = edges['flow_post'].abs()
+    abs = edges['flow'].abs()
 
-    hypo_mask = abs_post <  thresholds
-
-    # Flow reversal
-    sign_mask = np.sign(edges['flow_pre']) != np.sign(edges['flow_post'])
-    flow_mask = (abs_pre > 1e-12) & (abs_post > 1e-12)
-
-    reversal_mask = sign_mask & flow_mask
+    hypo_mask = abs <  thresholds
 
     return {
-        "baseline_flow": CBF_pre,
-        "post_obstruction_flow": CBF_post,
-        "global_cbf_drop": CBF_drop * 100,
+        "flow": CBF,
         "hypoperfused_vessel": hypo_mask,
         "hypoperfused_vessel_fraction": hypo_mask.mean(),
-        "flow_reversal": reversal_mask,
-        "flow_reversal_fraction": reversal_mask.mean()
     }
 
 
